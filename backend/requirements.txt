@@ -1,0 +1,41 @@
+# Flask core
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.5
+Flask-JWT-Extended==4.6.0
+Flask-CORS==4.0.0
+Flask-SocketIO==5.3.6
+
+# Database
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.23
+
+# Validation
+marshmallow==3.20.1
+marshmallow-sqlalchemy==0.29.0
+
+# Security
+argon2-cffi==23.1.0
+
+# Async tasks
+celery==5.3.4
+redis==5.0.1
+
+# AI integrations
+openai==1.6.1
+httpx==0.25.2
+
+# File processing
+openpyxl==3.1.2
+python-multipart==0.0.6
+
+# Utilities
+python-dotenv==1.0.0
+gunicorn==21.2.0
+eventlet==0.34.2
+
+# Development
+pytest==7.4.3
+pytest-flask==1.3.0
+black==23.12.1
+flake8==6.1.0
