@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { X, Calendar, Tag, Users, MessageSquare, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { cardsApi } from "@/lib/api";
-import type { Card, Priority, Comment } from "@/types";
+import { LabelPicker } from "./LabelPicker";
+import type { Card, Priority, Comment, Label, CardLabel } from "@/types";
 
 interface CardDetailModalProps {
   card: Card;
+  boardId: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (card: Card) => void;
@@ -22,7 +24,7 @@ const priorityOptions: { value: Priority; label: string; color: string }[] = [
   { value: "P4", label: "Minimal", color: "bg-gray-400" },
 ];
 
-export function CardDetailModal({ card, isOpen, onClose, onUpdate, onDelete }: CardDetailModalProps) {
+export function CardDetailModal({ card, boardId, isOpen, onClose, onUpdate, onDelete }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
   const [priority, setPriority] = useState<Priority | null>(card.priority);
@@ -30,6 +32,7 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate, onDelete }: C
   const [dueDate, setDueDate] = useState(card.due_date || "");
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<Comment[]>(card.comments || []);
+  const [cardLabels, setCardLabels] = useState<CardLabel[]>(card.labels || []);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -42,6 +45,7 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate, onDelete }: C
     setStoryPoints(card.story_points || "");
     setDueDate(card.due_date || "");
     setComments(card.comments || []);
+    setCardLabels(card.labels || []);
     setShowDeleteConfirm(false);
   }, [card]);
 
@@ -90,6 +94,14 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate, onDelete }: C
       console.error("Failed to delete card:", error);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleLabelToggle = (label: Label, isAdding: boolean) => {
+    if (isAdding) {
+      setCardLabels([...cardLabels, { label_id: label.id, label }]);
+    } else {
+      setCardLabels(cardLabels.filter((cl) => cl.label_id !== label.id));
     }
   };
 
@@ -275,24 +287,31 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate, onDelete }: C
               </div>
 
               {/* Labels */}
-              {card.labels && card.labels.length > 0 && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Labels
-                  </label>
-                  <div className="flex flex-wrap gap-1">
-                    {card.labels.map((labelAssoc) => (
-                      <span
-                        key={labelAssoc.label_id}
-                        className="rounded px-2 py-0.5 text-xs font-medium text-white"
-                        style={{ backgroundColor: labelAssoc.label?.color || "#6B7280" }}
-                      >
-                        {labelAssoc.label?.name}
-                      </span>
-                    ))}
-                  </div>
+              <div>
+                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Tag className="h-4 w-4" />
+                  Labels
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {cardLabels.map((labelAssoc) => (
+                    <span
+                      key={labelAssoc.label_id}
+                      className="rounded px-2 py-0.5 text-xs font-medium text-white"
+                      style={{ backgroundColor: labelAssoc.label?.color || "#6B7280" }}
+                    >
+                      {labelAssoc.label?.name}
+                    </span>
+                  ))}
                 </div>
-              )}
+                <div className="mt-2">
+                  <LabelPicker
+                    boardId={boardId}
+                    cardId={card.id}
+                    selectedLabels={cardLabels}
+                    onLabelToggle={handleLabelToggle}
+                  />
+                </div>
+              </div>
 
               {/* Meta info */}
               <div className="border-t pt-4 text-xs text-gray-500">

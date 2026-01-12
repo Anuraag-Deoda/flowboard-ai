@@ -8,7 +8,7 @@ from marshmallow import Schema, fields, validate, ValidationError
 from ..extensions import db
 from ..models import (
     Card, Column, Board, Project, Workspace, OrganizationMember,
-    CardAssignee, Comment, Priority
+    CardAssignee, CardLabel, Label, Comment, Priority
 )
 from ..events import event_dispatcher
 from ..events.base import DomainEventBase
@@ -412,3 +412,65 @@ def add_comment(card_id):
     })
 
     return jsonify({"comment": comment.to_dict()}), 201
+
+
+@cards_bp.route("/<uuid:card_id>/labels", methods=["POST"])
+@jwt_required()
+def add_label_to_card(card_id):
+    """Add label to card."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    label_id = request.json.get("label_id")
+    if not label_id:
+        return jsonify({"error": "label_id required"}), 400
+
+    label = Label.query.get(label_id)
+    if not label:
+        return jsonify({"error": "Label not found"}), 404
+
+    # Check if already added
+    existing = CardLabel.query.filter_by(
+        card_id=card_id, label_id=label_id
+    ).first()
+    if existing:
+        return jsonify({"error": "Label already added"}), 409
+
+    card_label = CardLabel(card_id=card_id, label_id=label_id)
+    db.session.add(card_label)
+    db.session.commit()
+
+    return jsonify({"card": card.to_dict(include_details=True)})
+
+
+@cards_bp.route("/<uuid:card_id>/labels/<uuid:label_id>", methods=["DELETE"])
+@jwt_required()
+def remove_label_from_card(card_id, label_id):
+    """Remove label from card."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    card_label = CardLabel.query.filter_by(
+        card_id=card_id, label_id=label_id
+    ).first()
+    if not card_label:
+        return jsonify({"error": "Label not on card"}), 404
+
+    db.session.delete(card_label)
+    db.session.commit()
+
+    return jsonify({"card": card.to_dict(include_details=True)})

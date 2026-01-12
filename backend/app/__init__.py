@@ -57,6 +57,7 @@ def register_blueprints(app):
     from .api.boards import boards_bp
     from .api.columns import columns_bp
     from .api.cards import cards_bp
+    from .api.labels import labels_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -66,6 +67,7 @@ def register_blueprints(app):
     app.register_blueprint(boards_bp, url_prefix="/api/boards")
     app.register_blueprint(columns_bp, url_prefix="/api/columns")
     app.register_blueprint(cards_bp, url_prefix="/api/cards")
+    app.register_blueprint(labels_bp)
 
 
 def register_error_handlers(app):

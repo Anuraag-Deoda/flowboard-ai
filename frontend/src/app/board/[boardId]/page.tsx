@@ -271,6 +271,7 @@ export default function BoardPage() {
       {selectedCard && (
         <CardDetailModal
           card={selectedCard}
+          boardId={boardId}
           isOpen={isModalOpen}
           onClose={handleModalClose}
           onUpdate={handleCardUpdate}

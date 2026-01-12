@@ -247,3 +247,42 @@ export const columnsApi = {
     return response.data;
   },
 };
+
+// Labels API
+export const labelsApi = {
+  list: async (boardId: string) => {
+    const response = await api.get("/labels/", {
+      params: { board_id: boardId },
+    });
+    return response.data;
+  },
+
+  create: async (boardId: string, name: string, color: string) => {
+    const response = await api.post("/labels/", {
+      board_id: boardId,
+      name,
+      color,
+    });
+    return response.data;
+  },
+
+  update: async (id: string, data: { name?: string; color?: string }) => {
+    const response = await api.put(`/labels/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete(`/labels/${id}`);
+    return response.data;
+  },
+
+  addToCard: async (cardId: string, labelId: string) => {
+    const response = await api.post(`/cards/${cardId}/labels`, { label_id: labelId });
+    return response.data;
+  },
+
+  removeFromCard: async (cardId: string, labelId: string) => {
+    const response = await api.delete(`/cards/${cardId}/labels/${labelId}`);
+    return response.data;
+  },
+};
