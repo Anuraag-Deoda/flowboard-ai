@@ -9,6 +9,7 @@ import type { Card, Priority } from "@/types";
 interface KanbanCardProps {
   card: Card;
   isDragging?: boolean;
+  onClick?: () => void;
 }
 
 const priorityColors: Record<Priority, string> = {
@@ -27,7 +28,7 @@ const priorityLabels: Record<Priority, string> = {
   P4: "Minimal",
 };
 
-export function KanbanCard({ card, isDragging }: KanbanCardProps) {
+export function KanbanCard({ card, isDragging, onClick }: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -50,6 +51,7 @@ export function KanbanCard({ card, isDragging }: KanbanCardProps) {
       style={style}
       {...attributes}
       {...listeners}
+      onClick={onClick}
       className={cn(
         "cursor-grab rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md",
         isCurrentlyDragging && "cursor-grabbing opacity-50 shadow-lg"
