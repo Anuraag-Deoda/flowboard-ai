@@ -31,7 +31,7 @@ export default function BoardPage() {
   const params = useParams();
   const boardId = params.boardId as string;
 
-  const { board, columns, isLoading, error, fetchBoard, moveCard, optimisticMoveCard, reorderColumns } =
+  const { board, columns, isLoading, error, fetchBoard, moveCard, optimisticMoveCard, reorderColumns, deleteCard } =
     useBoardStore();
 
   const [activeCard, setActiveCard] = useState<Card | null>(null);
@@ -66,6 +66,12 @@ export default function BoardPage() {
   };
 
   const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedCard(null);
+  };
+
+  const handleCardDelete = async (cardId: string) => {
+    await deleteCard(cardId);
     setIsModalOpen(false);
     setSelectedCard(null);
   };
@@ -268,6 +274,7 @@ export default function BoardPage() {
           isOpen={isModalOpen}
           onClose={handleModalClose}
           onUpdate={handleCardUpdate}
+          onDelete={handleCardDelete}
         />
       )}
     </div>

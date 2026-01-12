@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Calendar, Tag, Users, MessageSquare, Clock } from "lucide-react";
+import { X, Calendar, Tag, Users, MessageSquare, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { cardsApi } from "@/lib/api";
 import type { Card, Priority, Comment } from "@/types";
@@ -11,6 +11,7 @@ interface CardDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (card: Card) => void;
+  onDelete?: (cardId: string) => void;
 }
 
 const priorityOptions: { value: Priority; label: string; color: string }[] = [
@@ -21,7 +22,7 @@ const priorityOptions: { value: Priority; label: string; color: string }[] = [
   { value: "P4", label: "Minimal", color: "bg-gray-400" },
 ];
 
-export function CardDetailModal({ card, isOpen, onClose, onUpdate }: CardDetailModalProps) {
+export function CardDetailModal({ card, isOpen, onClose, onUpdate, onDelete }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
   const [priority, setPriority] = useState<Priority | null>(card.priority);
@@ -31,6 +32,8 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate }: CardDetailM
   const [comments, setComments] = useState<Comment[]>(card.comments || []);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingComment, setIsAddingComment] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setTitle(card.title);
@@ -39,6 +42,7 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate }: CardDetailM
     setStoryPoints(card.story_points || "");
     setDueDate(card.due_date || "");
     setComments(card.comments || []);
+    setShowDeleteConfirm(false);
   }, [card]);
 
   const handleSave = async () => {
@@ -74,6 +78,21 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate }: CardDetailM
     }
   };
 
+  const handleDelete = async () => {
+    if (!onDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await cardsApi.delete(card.id);
+      onDelete(card.id);
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete card:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -95,12 +114,23 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate }: CardDetailM
             className="flex-1 text-xl font-semibold text-gray-900 focus:outline-none"
             placeholder="Card title"
           />
-          <button
-            onClick={onClose}
-            className="ml-4 rounded p-1 hover:bg-gray-100"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
+          <div className="ml-4 flex items-center gap-2">
+            {onDelete && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                title="Delete card"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded p-1 hover:bg-gray-100"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
@@ -289,6 +319,33 @@ export function CardDetailModal({ card, isOpen, onClose, onUpdate }: CardDetailM
             </button>
           </div>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-black/50">
+            <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-gray-900">Delete Card</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Are you sure you want to delete "{card.title}"? This action cannot be undone.
+              </p>
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
