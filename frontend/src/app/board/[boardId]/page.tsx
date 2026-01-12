@@ -22,16 +22,19 @@ import {
 import { useBoardStore } from "@/store/board";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
 import { KanbanCard } from "@/components/board/KanbanCard";
+import { CardDetailModal } from "@/components/board/CardDetailModal";
 import type { Card } from "@/types";
 
 export default function BoardPage() {
   const params = useParams();
   const boardId = params.boardId as string;
 
-  const { board, columns, isLoading, error, fetchBoard, moveCard, optimisticMoveCard } =
+  const { board, columns, isLoading, error, fetchBoard, moveCard, optimisticMoveCard, updateCard } =
     useBoardStore();
 
   const [activeCard, setActiveCard] = useState<Card | null>(null);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -47,6 +50,22 @@ export default function BoardPage() {
   useEffect(() => {
     fetchBoard(boardId);
   }, [boardId, fetchBoard]);
+
+  const handleCardClick = (card: Card) => {
+    setSelectedCard(card);
+    setIsModalOpen(true);
+  };
+
+  const handleCardUpdate = (updatedCard: Card) => {
+    setSelectedCard(updatedCard);
+    // Refresh board to show updated card
+    fetchBoard(boardId);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedCard(null);
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -170,7 +189,11 @@ export default function BoardPage() {
                 strategy={verticalListSortingStrategy}
               >
                 {column.cards?.map((card) => (
-                  <KanbanCard key={card.id} card={card} />
+                  <KanbanCard
+                    key={card.id}
+                    card={card}
+                    onClick={() => handleCardClick(card)}
+                  />
                 ))}
               </SortableContext>
             </KanbanColumn>
@@ -183,6 +206,16 @@ export default function BoardPage() {
           </DragOverlay>
         </DndContext>
       </div>
+
+      {/* Card Detail Modal */}
+      {selectedCard && (
+        <CardDetailModal
+          card={selectedCard}
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onUpdate={handleCardUpdate}
+        />
+      )}
     </div>
   );
 }
