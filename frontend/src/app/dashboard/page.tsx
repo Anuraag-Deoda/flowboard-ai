@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/auth";
 import { organizationsApi, workspacesApi, projectsApi, boardsApi } from "@/lib/api";
 import type { Organization, Workspace, Project, Board } from "@/types";
 import { Plus, Building2, Folder, Layout } from "lucide-react";
+import { CreateModal } from "@/components/modals/CreateModal";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -20,6 +21,12 @@ export default function DashboardPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [boards, setBoards] = useState<Board[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Modal states
+  const [createOrgModalOpen, setCreateOrgModalOpen] = useState(false);
+  const [createWorkspaceModalOpen, setCreateWorkspaceModalOpen] = useState(false);
+  const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
+  const [createBoardModalOpen, setCreateBoardModalOpen] = useState(false);
 
   // Check auth on mount
   useEffect(() => {
@@ -115,58 +122,30 @@ export default function DashboardPage() {
     fetchBoards();
   }, [selectedProject]);
 
-  const handleCreateOrg = async () => {
-    const name = prompt("Enter organization name:");
-    if (!name) return;
-
-    try {
-      const data = await organizationsApi.create(name);
-      setOrganizations([...organizations, data.organization]);
-      setSelectedOrg(data.organization);
-    } catch (error) {
-      console.error("Failed to create organization:", error);
-    }
+  const handleCreateOrg = async (name: string) => {
+    const data = await organizationsApi.create(name);
+    setOrganizations([...organizations, data.organization]);
+    setSelectedOrg(data.organization);
   };
 
-  const handleCreateWorkspace = async () => {
+  const handleCreateWorkspace = async (name: string) => {
     if (!selectedOrg) return;
-    const name = prompt("Enter workspace name:");
-    if (!name) return;
-
-    try {
-      const data = await workspacesApi.create(selectedOrg.id, name);
-      setWorkspaces([...workspaces, data.workspace]);
-      setSelectedWorkspace(data.workspace);
-    } catch (error) {
-      console.error("Failed to create workspace:", error);
-    }
+    const data = await workspacesApi.create(selectedOrg.id, name);
+    setWorkspaces([...workspaces, data.workspace]);
+    setSelectedWorkspace(data.workspace);
   };
 
-  const handleCreateProject = async () => {
+  const handleCreateProject = async (name: string) => {
     if (!selectedWorkspace) return;
-    const name = prompt("Enter project name:");
-    if (!name) return;
-
-    try {
-      const data = await projectsApi.create(selectedWorkspace.id, name);
-      setProjects([...projects, data.project]);
-      setSelectedProject(data.project);
-    } catch (error) {
-      console.error("Failed to create project:", error);
-    }
+    const data = await projectsApi.create(selectedWorkspace.id, name);
+    setProjects([...projects, data.project]);
+    setSelectedProject(data.project);
   };
 
-  const handleCreateBoard = async () => {
+  const handleCreateBoard = async (name: string) => {
     if (!selectedProject) return;
-    const name = prompt("Enter board name:");
-    if (!name) return;
-
-    try {
-      const data = await boardsApi.create(selectedProject.id, name);
-      setBoards([...boards, data.board]);
-    } catch (error) {
-      console.error("Failed to create board:", error);
-    }
+    const data = await boardsApi.create(selectedProject.id, name);
+    setBoards([...boards, data.board]);
   };
 
   if (authLoading || isLoading) {
@@ -211,7 +190,7 @@ export default function DashboardPage() {
                 Organizations
               </h2>
               <button
-                onClick={handleCreateOrg}
+                onClick={() => setCreateOrgModalOpen(true)}
                 className="rounded p-1 hover:bg-gray-100"
               >
                 <Plus className="h-4 w-4 text-gray-500" />
@@ -247,7 +226,7 @@ export default function DashboardPage() {
                 Workspaces
               </h2>
               <button
-                onClick={handleCreateWorkspace}
+                onClick={() => setCreateWorkspaceModalOpen(true)}
                 disabled={!selectedOrg}
                 className="rounded p-1 hover:bg-gray-100 disabled:opacity-50"
               >
@@ -284,7 +263,7 @@ export default function DashboardPage() {
                 Projects
               </h2>
               <button
-                onClick={handleCreateProject}
+                onClick={() => setCreateProjectModalOpen(true)}
                 disabled={!selectedWorkspace}
                 className="rounded p-1 hover:bg-gray-100 disabled:opacity-50"
               >
@@ -321,7 +300,7 @@ export default function DashboardPage() {
                 Boards
               </h2>
               <button
-                onClick={handleCreateBoard}
+                onClick={() => setCreateBoardModalOpen(true)}
                 disabled={!selectedProject}
                 className="rounded p-1 hover:bg-gray-100 disabled:opacity-50"
               >
@@ -347,6 +326,41 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Create Modals */}
+      <CreateModal
+        isOpen={createOrgModalOpen}
+        onClose={() => setCreateOrgModalOpen(false)}
+        onSubmit={handleCreateOrg}
+        title="Create Organization"
+        entityName="Organization"
+      />
+
+      <CreateModal
+        isOpen={createWorkspaceModalOpen}
+        onClose={() => setCreateWorkspaceModalOpen(false)}
+        onSubmit={handleCreateWorkspace}
+        title="Create Workspace"
+        entityName="Workspace"
+      />
+
+      <CreateModal
+        isOpen={createProjectModalOpen}
+        onClose={() => setCreateProjectModalOpen(false)}
+        onSubmit={handleCreateProject}
+        title="Create Project"
+        entityName="Project"
+        showDescription
+      />
+
+      <CreateModal
+        isOpen={createBoardModalOpen}
+        onClose={() => setCreateBoardModalOpen(false)}
+        onSubmit={handleCreateBoard}
+        title="Create Board"
+        entityName="Board"
+        showDescription
+      />
     </div>
   );
 }
