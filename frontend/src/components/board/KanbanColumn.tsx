@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { Plus } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBoardStore } from "@/store/board";
 import type { Column } from "@/types";
@@ -10,16 +12,44 @@ import type { Column } from "@/types";
 interface KanbanColumnProps {
   column: Column;
   children: React.ReactNode;
+  isDragging?: boolean;
 }
 
-export function KanbanColumn({ column, children }: KanbanColumnProps) {
+export function KanbanColumn({ column, children, isDragging: isDraggingProp }: KanbanColumnProps) {
   const { createCard } = useBoardStore();
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState("");
 
-  const { setNodeRef, isOver } = useDroppable({
+  // Sortable for column reordering
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setSortableRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({
+    id: `column-${column.id}`,
+    data: { type: "column", column },
+  });
+
+  // Droppable for cards
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
   });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const isCurrentlyDragging = isDraggingProp || isSortableDragging;
+
+  // Combine refs
+  const setNodeRef = (node: HTMLElement | null) => {
+    setSortableRef(node);
+    setDroppableRef(node);
+  };
 
   const handleAddCard = async () => {
     if (!newCardTitle.trim()) return;
@@ -45,14 +75,23 @@ export function KanbanColumn({ column, children }: KanbanColumnProps) {
   return (
     <div
       ref={setNodeRef}
+      style={style}
       className={cn(
         "flex h-full w-80 flex-shrink-0 flex-col rounded-lg bg-gray-200/50",
-        isOver && "bg-blue-100/50"
+        isOver && "bg-blue-100/50",
+        isCurrentlyDragging && "opacity-50"
       )}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab rounded p-1 hover:bg-gray-300 active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4 text-gray-500" />
+          </button>
           <h3 className="font-semibold text-gray-700">{column.name}</h3>
           <span className="rounded-full bg-gray-300 px-2 py-0.5 text-xs font-medium text-gray-600">
             {column.card_count}

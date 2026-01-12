@@ -18,21 +18,24 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  horizontalListSortingStrategy,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { useBoardStore } from "@/store/board";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
 import { KanbanCard } from "@/components/board/KanbanCard";
 import { CardDetailModal } from "@/components/board/CardDetailModal";
-import type { Card } from "@/types";
+import type { Card, Column } from "@/types";
 
 export default function BoardPage() {
   const params = useParams();
   const boardId = params.boardId as string;
 
-  const { board, columns, isLoading, error, fetchBoard, moveCard, optimisticMoveCard, updateCard } =
+  const { board, columns, isLoading, error, fetchBoard, moveCard, optimisticMoveCard, reorderColumns } =
     useBoardStore();
 
   const [activeCard, setActiveCard] = useState<Card | null>(null);
+  const [activeColumn, setActiveColumn] = useState<Column | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -69,11 +72,21 @@ export default function BoardPage() {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const cardId = active.id as string;
+    const activeId = active.id as string;
+
+    // Check if dragging a column
+    if (activeId.startsWith("column-")) {
+      const columnId = activeId.replace("column-", "");
+      const column = columns.find((c) => c.id === columnId);
+      if (column) {
+        setActiveColumn(column);
+        return;
+      }
+    }
 
     // Find the card
     for (const column of columns) {
-      const card = column.cards?.find((c) => c.id === cardId);
+      const card = column.cards?.find((c) => c.id === activeId);
       if (card) {
         setActiveCard(card);
         break;
@@ -87,6 +100,11 @@ export default function BoardPage() {
 
     const activeId = active.id as string;
     const overId = over.id as string;
+
+    // Skip if dragging a column (columns don't need dragOver handling)
+    if (activeId.startsWith("column-")) {
+      return;
+    }
 
     // Find source and target columns
     let sourceColumnId: string | null = null;
@@ -117,11 +135,36 @@ export default function BoardPage() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCard(null);
+    setActiveColumn(null);
 
     if (!over) return;
 
-    const cardId = active.id as string;
+    const activeId = active.id as string;
     const overId = over.id as string;
+
+    // Handle column reordering
+    if (activeId.startsWith("column-") && overId.startsWith("column-")) {
+      const activeColumnId = activeId.replace("column-", "");
+      const overColumnId = overId.replace("column-", "");
+
+      if (activeColumnId !== overColumnId) {
+        const oldIndex = columns.findIndex((c) => c.id === activeColumnId);
+        const newIndex = columns.findIndex((c) => c.id === overColumnId);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(columns, oldIndex, newIndex);
+          try {
+            await reorderColumns(newOrder.map((c) => c.id));
+          } catch (error) {
+            console.error("Failed to reorder columns:", error);
+          }
+        }
+      }
+      return;
+    }
+
+    // Handle card movement
+    const cardId = activeId;
 
     // Find target column
     let targetColumnId: string | null = null;
@@ -182,26 +225,37 @@ export default function BoardPage() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          {columns.map((column) => (
-            <KanbanColumn key={column.id} column={column}>
-              <SortableContext
-                items={column.cards?.map((c) => c.id) || []}
-                strategy={verticalListSortingStrategy}
-              >
-                {column.cards?.map((card) => (
-                  <KanbanCard
-                    key={card.id}
-                    card={card}
-                    onClick={() => handleCardClick(card)}
-                  />
-                ))}
-              </SortableContext>
-            </KanbanColumn>
-          ))}
+          <SortableContext
+            items={columns.map((c) => `column-${c.id}`)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {columns.map((column) => (
+              <KanbanColumn key={column.id} column={column}>
+                <SortableContext
+                  items={column.cards?.map((c) => c.id) || []}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {column.cards?.map((card) => (
+                    <KanbanCard
+                      key={card.id}
+                      card={card}
+                      onClick={() => handleCardClick(card)}
+                    />
+                  ))}
+                </SortableContext>
+              </KanbanColumn>
+            ))}
+          </SortableContext>
 
           <DragOverlay>
             {activeCard ? (
               <KanbanCard card={activeCard} isDragging />
+            ) : activeColumn ? (
+              <KanbanColumn column={activeColumn} isDragging>
+                <div className="text-center text-sm text-gray-500">
+                  {activeColumn.card_count} cards
+                </div>
+              </KanbanColumn>
             ) : null}
           </DragOverlay>
         </DndContext>
