@@ -22,10 +22,10 @@ interface AuthState {
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Start as true to prevent flash redirect before auth check completes
   error: null,
 
   login: async (email: string, password: string) => {
@@ -73,11 +73,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
+    // Skip if already authenticated and user is loaded
+    const state = get();
+    if (state.isAuthenticated && state.user) {
+      set({ isLoading: false });
+      return;
+    }
+
     const token = localStorage.getItem("access_token");
     if (!token) {
       set({ isLoading: false, isAuthenticated: false });
       return;
     }
+
+    // Set loading true while checking
+    set({ isLoading: true });
 
     try {
       const data = await authApi.me();
