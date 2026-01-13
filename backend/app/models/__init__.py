@@ -9,6 +9,9 @@ from .column import Column
 from .card import Card, CardAssignee, CardLabel, Priority
 from .label import Label
 from .comment import Comment
+from .subtask import Subtask
+from .card_link import CardLink, LinkType, INVERSE_LINK_TYPES
+from .attachment import Attachment
 from .sprint import Sprint, CardSprint, SprintRetrospective, SprintNote
 from .daily_log import DailyLog
 from .activity_log import ActivityLog
@@ -29,6 +32,11 @@ __all__ = [
     "Priority",
     "Label",
     "Comment",
+    "Subtask",
+    "CardLink",
+    "LinkType",
+    "INVERSE_LINK_TYPES",
+    "Attachment",
     "Sprint",
     "CardSprint",
     "SprintRetrospective",

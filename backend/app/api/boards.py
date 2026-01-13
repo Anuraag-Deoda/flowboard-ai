@@ -106,6 +106,7 @@ def get_board(board_id):
 
     # Build full board data with columns and cards
     board_data = board.to_dict()
+    board_data["organization_id"] = str(workspace.organization_id)
     board_data["columns"] = []
 
     for column in board.columns:

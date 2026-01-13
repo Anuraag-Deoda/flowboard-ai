@@ -6,10 +6,24 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import Schema, fields, validate, ValidationError
 
 from ..extensions import db
+import os
+import uuid as uuid_lib
+from werkzeug.utils import secure_filename
+
 from ..models import (
     Card, Column, Board, Project, Workspace, OrganizationMember,
-    CardAssignee, CardLabel, Label, Comment, Priority
+    CardAssignee, CardLabel, Label, Comment, Priority, ActivityLog, Subtask,
+    CardLink, LinkType, INVERSE_LINK_TYPES, Attachment
 )
+
+# File upload configuration
+UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
+ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif", "doc", "docx", "xls", "xlsx", "csv", "zip", "md"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 from ..events import event_dispatcher
 from ..events.base import DomainEventBase
 
@@ -474,3 +488,399 @@ def remove_label_from_card(card_id, label_id):
     db.session.commit()
 
     return jsonify({"card": card.to_dict(include_details=True)})
+
+
+@cards_bp.route("/<uuid:card_id>/activity", methods=["GET"])
+@jwt_required()
+def get_card_activity(card_id):
+    """Get activity logs for a card."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    activities = ActivityLog.query.filter_by(card_id=card_id).order_by(
+        ActivityLog.created_at.desc()
+    ).limit(50).all()
+
+    return jsonify({"activities": [a.to_dict() for a in activities]})
+
+
+# Subtask endpoints
+
+class SubtaskSchema(Schema):
+    title = fields.Str(required=True, validate=validate.Length(min=1, max=500))
+
+
+subtask_schema = SubtaskSchema()
+
+
+@cards_bp.route("/<uuid:card_id>/subtasks", methods=["GET"])
+@jwt_required()
+def list_subtasks(card_id):
+    """List subtasks for a card."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    return jsonify({"subtasks": [s.to_dict() for s in card.subtasks]})
+
+
+@cards_bp.route("/<uuid:card_id>/subtasks", methods=["POST"])
+@jwt_required()
+def create_subtask(card_id):
+    """Create a subtask for a card."""
+    user_id = get_jwt_identity()
+
+    try:
+        data = subtask_schema.load(request.json)
+    except ValidationError as err:
+        return jsonify({"error": "Validation failed", "details": err.messages}), 400
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    # Get next position
+    max_pos = db.session.query(db.func.max(Subtask.position)).filter_by(
+        card_id=card_id
+    ).scalar() or -1
+
+    subtask = Subtask(
+        card_id=card_id,
+        title=data["title"],
+        position=max_pos + 1,
+    )
+    db.session.add(subtask)
+    db.session.commit()
+
+    return jsonify({"subtask": subtask.to_dict()}), 201
+
+
+@cards_bp.route("/<uuid:card_id>/subtasks/<uuid:subtask_id>", methods=["PUT"])
+@jwt_required()
+def update_subtask(card_id, subtask_id):
+    """Update a subtask."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    subtask = Subtask.query.filter_by(id=subtask_id, card_id=card_id).first()
+    if not subtask:
+        return jsonify({"error": "Subtask not found"}), 404
+
+    data = request.json
+    if "title" in data:
+        subtask.title = data["title"]
+    if "is_completed" in data:
+        subtask.is_completed = data["is_completed"]
+    if "position" in data:
+        subtask.position = data["position"]
+
+    db.session.commit()
+
+    return jsonify({"subtask": subtask.to_dict()})
+
+
+@cards_bp.route("/<uuid:card_id>/subtasks/<uuid:subtask_id>", methods=["DELETE"])
+@jwt_required()
+def delete_subtask(card_id, subtask_id):
+    """Delete a subtask."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    subtask = Subtask.query.filter_by(id=subtask_id, card_id=card_id).first()
+    if not subtask:
+        return jsonify({"error": "Subtask not found"}), 404
+
+    db.session.delete(subtask)
+    db.session.commit()
+
+    return jsonify({"message": "Subtask deleted"})
+
+
+# Card Link endpoints
+
+VALID_LINK_TYPES = ["blocks", "blocked_by", "relates_to", "duplicates", "duplicated_by"]
+
+
+@cards_bp.route("/<uuid:card_id>/links", methods=["GET"])
+@jwt_required()
+def list_card_links(card_id):
+    """List all links for a card (both outgoing and incoming)."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    # Get outgoing and incoming links
+    outgoing = CardLink.query.filter_by(source_card_id=card_id).all()
+    incoming = CardLink.query.filter_by(target_card_id=card_id).all()
+
+    return jsonify({
+        "links": {
+            "outgoing": [l.to_dict() for l in outgoing],
+            "incoming": [l.to_dict() for l in incoming],
+        }
+    })
+
+
+@cards_bp.route("/<uuid:card_id>/links", methods=["POST"])
+@jwt_required()
+def create_card_link(card_id):
+    """Create a link from this card to another card."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    data = request.json
+    target_card_id = data.get("target_card_id")
+    link_type_str = data.get("link_type")
+
+    if not target_card_id or not link_type_str:
+        return jsonify({"error": "target_card_id and link_type required"}), 400
+
+    if link_type_str not in VALID_LINK_TYPES:
+        return jsonify({"error": f"Invalid link_type. Must be one of: {VALID_LINK_TYPES}"}), 400
+
+    # Prevent self-linking
+    if str(card_id) == target_card_id:
+        return jsonify({"error": "Cannot link a card to itself"}), 400
+
+    # Check target card exists and user has access
+    target_card = Card.query.get(target_card_id)
+    if not target_card:
+        return jsonify({"error": "Target card not found"}), 404
+
+    # Check for existing link
+    existing = CardLink.query.filter_by(
+        source_card_id=card_id,
+        target_card_id=target_card_id,
+        link_type=LinkType(link_type_str)
+    ).first()
+    if existing:
+        return jsonify({"error": "Link already exists"}), 409
+
+    link = CardLink(
+        source_card_id=card_id,
+        target_card_id=target_card_id,
+        link_type=LinkType(link_type_str),
+        created_by=user_id,
+    )
+    db.session.add(link)
+    db.session.commit()
+
+    return jsonify({"link": link.to_dict()}), 201
+
+
+@cards_bp.route("/<uuid:card_id>/links/<uuid:link_id>", methods=["DELETE"])
+@jwt_required()
+def delete_card_link(card_id, link_id):
+    """Delete a card link."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    # Find link where this card is either source or target
+    link = CardLink.query.filter(
+        CardLink.id == link_id,
+        db.or_(
+            CardLink.source_card_id == card_id,
+            CardLink.target_card_id == card_id
+        )
+    ).first()
+
+    if not link:
+        return jsonify({"error": "Link not found"}), 404
+
+    db.session.delete(link)
+    db.session.commit()
+
+    return jsonify({"message": "Link deleted"})
+
+
+# Attachment endpoints
+
+@cards_bp.route("/<uuid:card_id>/attachments", methods=["GET"])
+@jwt_required()
+def list_attachments(card_id):
+    """List attachments for a card."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    return jsonify({"attachments": [a.to_dict() for a in card.attachments]})
+
+
+@cards_bp.route("/<uuid:card_id>/attachments", methods=["POST"])
+@jwt_required()
+def upload_attachment(card_id):
+    """Upload an attachment to a card."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+
+    # Check file size
+    file.seek(0, 2)  # Seek to end
+    file_size = file.tell()
+    file.seek(0)  # Seek back to start
+
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({"error": f"File too large. Max size: {MAX_FILE_SIZE / (1024*1024):.0f}MB"}), 400
+
+    # Secure the filename and generate unique storage path
+    original_filename = secure_filename(file.filename)
+    ext = original_filename.rsplit(".", 1)[1].lower() if "." in original_filename else ""
+    storage_filename = f"{uuid_lib.uuid4().hex}.{ext}" if ext else f"{uuid_lib.uuid4().hex}"
+
+    # Create upload directory if it doesn't exist
+    card_upload_dir = os.path.join(UPLOAD_FOLDER, str(card_id))
+    os.makedirs(card_upload_dir, exist_ok=True)
+
+    storage_path = os.path.join(card_upload_dir, storage_filename)
+
+    # Save file
+    file.save(storage_path)
+
+    # Get MIME type
+    mime_type = file.content_type or "application/octet-stream"
+
+    # Create attachment record
+    attachment = Attachment(
+        card_id=card_id,
+        filename=original_filename,
+        storage_path=storage_path,
+        file_size=file_size,
+        mime_type=mime_type,
+        uploaded_by=user_id,
+    )
+    db.session.add(attachment)
+    db.session.commit()
+
+    return jsonify({"attachment": attachment.to_dict()}), 201
+
+
+@cards_bp.route("/<uuid:card_id>/attachments/<uuid:attachment_id>", methods=["DELETE"])
+@jwt_required()
+def delete_attachment(card_id, attachment_id):
+    """Delete an attachment."""
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    attachment = Attachment.query.filter_by(id=attachment_id, card_id=card_id).first()
+    if not attachment:
+        return jsonify({"error": "Attachment not found"}), 404
+
+    # Delete file from storage
+    if os.path.exists(attachment.storage_path):
+        os.remove(attachment.storage_path)
+
+    db.session.delete(attachment)
+    db.session.commit()
+
+    return jsonify({"message": "Attachment deleted"})
+
+
+@cards_bp.route("/<uuid:card_id>/attachments/<uuid:attachment_id>/download", methods=["GET"])
+@jwt_required()
+def download_attachment(card_id, attachment_id):
+    """Download an attachment."""
+    from flask import send_file
+
+    user_id = get_jwt_identity()
+
+    card = Card.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    column, board, membership = check_column_access(card.column_id, user_id)
+    if not membership:
+        return jsonify({"error": "Forbidden"}), 403
+
+    attachment = Attachment.query.filter_by(id=attachment_id, card_id=card_id).first()
+    if not attachment:
+        return jsonify({"error": "Attachment not found"}), 404
+
+    if not os.path.exists(attachment.storage_path):
+        return jsonify({"error": "File not found on server"}), 404
+
+    return send_file(
+        attachment.storage_path,
+        download_name=attachment.filename,
+        as_attachment=True,
+        mimetype=attachment.mime_type
+    )

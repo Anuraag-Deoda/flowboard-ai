@@ -44,6 +44,7 @@ export interface Project {
 export interface Board {
   id: string;
   project_id: string;
+  organization_id?: string;
   name: string;
   created_at: string;
   columns?: Column[];
@@ -82,6 +83,8 @@ export interface Card {
   created_by?: string;
   created_by_user?: User;
   comments?: Comment[];
+  subtasks?: Subtask[];
+  attachments?: Attachment[];
 }
 
 export interface CardAssignee {
@@ -109,6 +112,47 @@ export interface Comment {
   user_id: string;
   user: User;
   content: string;
+  created_at: string;
+}
+
+// Subtask types
+export interface Subtask {
+  id: string;
+  card_id: string;
+  title: string;
+  is_completed: boolean;
+  position: number;
+  created_at: string;
+  updated_at: string | null;
+}
+
+// Card Link types
+export type LinkType = "blocks" | "blocked_by" | "relates_to" | "duplicates" | "duplicated_by";
+
+export interface CardLink {
+  id: string;
+  source_card_id: string;
+  target_card_id: string;
+  link_type: LinkType;
+  source_card: { id: string; title: string } | null;
+  target_card: { id: string; title: string } | null;
+  created_at: string;
+}
+
+export interface CardLinks {
+  outgoing: CardLink[];
+  incoming: CardLink[];
+}
+
+// Attachment types
+export interface Attachment {
+  id: string;
+  card_id: string;
+  filename: string;
+  file_size: number;
+  mime_type: string | null;
+  uploaded_by: string | null;
+  uploaded_by_user: User | null;
   created_at: string;
 }
 

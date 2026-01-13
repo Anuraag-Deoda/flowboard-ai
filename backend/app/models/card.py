@@ -56,6 +56,14 @@ class Card(db.Model, UUIDMixin, TimestampMixin):
     sprint_associations = relationship(
         "CardSprint", back_populates="card", cascade="all, delete-orphan"
     )
+    subtasks = relationship(
+        "Subtask", back_populates="card", cascade="all, delete-orphan",
+        order_by="Subtask.position"
+    )
+    attachments = relationship(
+        "Attachment", back_populates="card", cascade="all, delete-orphan",
+        order_by="Attachment.created_at.desc()"
+    )
 
     def to_dict(self, include_details=False):
         """Serialize card to dictionary."""
@@ -80,6 +88,8 @@ class Card(db.Model, UUIDMixin, TimestampMixin):
                 "created_by": str(self.created_by) if self.created_by else None,
                 "created_by_user": self.created_by_user.to_dict() if self.created_by_user else None,
                 "comments": [c.to_dict() for c in self.comments],
+                "subtasks": [s.to_dict() for s in self.subtasks],
+                "attachments": [a.to_dict() for a in self.attachments],
             })
 
         return data
