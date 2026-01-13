@@ -9,6 +9,7 @@ from .boards import boards_bp
 from .columns import columns_bp
 from .cards import cards_bp
 from .labels import labels_bp
+from .analytics import analytics_bp
 
 __all__ = [
     "health_bp",
@@ -20,4 +21,5 @@ __all__ = [
     "columns_bp",
     "cards_bp",
     "labels_bp",
+    "analytics_bp",
 ]
