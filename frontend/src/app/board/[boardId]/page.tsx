@@ -131,11 +131,15 @@ export default function BoardPage() {
     let sourceColumnId: string | null = null;
     let targetColumnId: string | null = null;
 
+    // Handle both column ID formats: "column-{id}" (sortable) and "{id}" (droppable)
+    const normalizedOverId = overId.startsWith("column-") ? overId.replace("column-", "") : overId;
+
     for (const column of columns) {
       if (column.cards?.some((c) => c.id === activeId)) {
         sourceColumnId = column.id;
       }
-      if (column.id === overId || column.cards?.some((c) => c.id === overId)) {
+      // Check if hovering over the column itself or a card in the column
+      if (column.id === normalizedOverId || column.id === overId || column.cards?.some((c) => c.id === overId)) {
         targetColumnId = column.id;
       }
     }
@@ -187,16 +191,21 @@ export default function BoardPage() {
     // Handle card movement
     const cardId = activeId;
 
+    // Handle both column ID formats: "column-{id}" (sortable) and "{id}" (droppable)
+    const normalizedOverId = overId.startsWith("column-") ? overId.replace("column-", "") : overId;
+
     // Find target column
     let targetColumnId: string | null = null;
     let position = 0;
 
     for (const column of columns) {
-      if (column.id === overId) {
+      // Check if dropped on the column itself (either ID format)
+      if (column.id === overId || column.id === normalizedOverId) {
         targetColumnId = column.id;
         position = column.cards?.length || 0;
         break;
       }
+      // Check if dropped on a card in the column
       const overCard = column.cards?.find((c) => c.id === overId);
       if (overCard) {
         targetColumnId = column.id;
