@@ -61,6 +61,8 @@ def register_blueprints(app):
     from .api.sprints import sprints_bp
     from .api.daily_logs import daily_logs_bp
     from .api.ai import ai_bp
+    from .api.analytics import analytics_bp
+    from .api.imports import imports_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -74,6 +76,8 @@ def register_blueprints(app):
     app.register_blueprint(sprints_bp, url_prefix="/api/sprints")
     app.register_blueprint(daily_logs_bp, url_prefix="/api/daily-logs")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
+    app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
+    app.register_blueprint(imports_bp, url_prefix="/api/import")
 
 
 def register_error_handlers(app):
