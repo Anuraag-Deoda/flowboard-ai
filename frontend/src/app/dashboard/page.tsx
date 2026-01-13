@@ -19,6 +19,7 @@ import {
   Bell,
   Search,
   ChevronRight,
+  BarChart3,
 } from "lucide-react";
 import { CreateModal } from "@/components/modals/CreateModal";
 import { cn } from "@/lib/utils";
@@ -436,7 +437,7 @@ export default function DashboardPage() {
         {selectedProject && (
           <div className="mt-8">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Access</h2>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Link
                 href={`/project/${selectedProject.id}/sprints`}
                 className="group flex items-center gap-4 rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 hover:border-blue-300 hover:shadow-md transition-all"
@@ -475,6 +476,20 @@ export default function DashboardPage() {
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-900">Daily Log</h3>
                   <p className="text-sm text-gray-500">Track your time</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+
+              <Link
+                href={`/project/${selectedProject.id}/analytics`}
+                className="group flex items-center gap-4 rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 hover:border-amber-300 hover:shadow-md transition-all"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100">
+                  <BarChart3 className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">Analytics</h3>
+                  <p className="text-sm text-gray-500">Velocity & insights</p>
                 </div>
                 <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
