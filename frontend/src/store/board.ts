@@ -11,7 +11,7 @@ interface BoardState {
   fetchBoard: (boardId: string) => Promise<void>;
   moveCard: (cardId: string, targetColumnId: string, targetPosition: number) => Promise<void>;
   createCard: (columnId: string, title: string, options?: { priority?: string; story_points?: number; description?: string }) => Promise<Card>;
-  updateCard: (cardId: string, data: Partial<Card>) => Promise<void>;
+  updateCard: (cardId: string, data: Partial<{ title: string; description: string; priority: string | null; story_points: number; due_date: string }>) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
   createColumn: (name: string) => Promise<void>;
   updateColumn: (columnId: string, data: Partial<Column>) => Promise<void>;

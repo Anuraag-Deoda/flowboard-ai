@@ -44,6 +44,7 @@ export function CardDetailModal({ card, boardId, organizationId, isOpen, onClose
   const [subtasks, setSubtasks] = useState<Subtask[]>(card.subtasks || []);
   const [attachments, setAttachments] = useState<Attachment[]>(card.attachments || []);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -66,17 +67,23 @@ export function CardDetailModal({ card, boardId, organizationId, isOpen, onClose
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveSuccess(false);
     try {
-      const data = await cardsApi.update(card.id, {
+      const updateData: Record<string, any> = {
         title,
-        description,
-        priority: priority || undefined,
-        story_points: storyPoints ? Number(storyPoints) : undefined,
-        due_date: dueDate || undefined,
-      });
+        description: description || null,
+        priority: priority || null,
+        story_points: storyPoints !== "" && storyPoints !== undefined ? Number(storyPoints) : null,
+        due_date: dueDate || null,
+      };
+
+      const data = await cardsApi.update(card.id, updateData);
       onUpdate(data.card);
-    } catch (error) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (error: any) {
       console.error("Failed to update card:", error);
+      alert(error.response?.data?.error || "Failed to save changes. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -417,9 +424,12 @@ export function CardDetailModal({ card, boardId, organizationId, isOpen, onClose
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className={cn(
+                "rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50",
+                saveSuccess ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
+              )}
             >
-              {isSaving ? "Saving..." : "Save Changes"}
+              {isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save Changes"}
             </button>
           </div>
         </div>
