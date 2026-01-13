@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth";
-import { boardsApi, projectsApi, aiApi, sprintsApi } from "@/lib/api";
+import { boardsApi, projectsApi, aiApi, sprintsApi, cardsApi } from "@/lib/api";
 import type { Card, Project, Board, Column, Sprint } from "@/types";
+import { CardDetailModal } from "@/components/board/CardDetailModal";
 import {
   ArrowLeft,
   Filter,
@@ -16,6 +17,7 @@ import {
   ArrowRight,
   RefreshCw,
   CheckCircle,
+  Upload,
 } from "lucide-react";
 
 interface GroomingSuggestions {
@@ -49,11 +51,17 @@ export default function BacklogPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [boardId, setBoardId] = useState<string>("");
+  const [organizationId, setOrganizationId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [groomingSuggestions, setGroomingSuggestions] =
     useState<GroomingSuggestions | null>(null);
   const [isGrooming, setIsGrooming] = useState(false);
+
+  // Card modal state
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Filters
   const [priorityFilter, setPriorityFilter] = useState<string>("");
@@ -91,6 +99,11 @@ export default function BacklogPage() {
 
         for (const board of boardsData.boards) {
           const boardDetails = await boardsApi.get(board.id);
+          // Store the first board ID and org ID for the modal
+          if (!boardId && board.id) {
+            setBoardId(board.id);
+            setOrganizationId(boardDetails.board.organization_id || "");
+          }
           if (boardDetails.board.columns) {
             for (const column of boardDetails.board.columns) {
               // Exclude "Done" column from backlog
@@ -131,6 +144,37 @@ export default function BacklogPage() {
     } catch (error: any) {
       alert(error.response?.data?.error || "Failed to add card to sprint");
     }
+  };
+
+  const handleCardClick = async (card: Card) => {
+    // Fetch full card details
+    try {
+      const data = await cardsApi.get(card.id);
+      setSelectedCard(data.card);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch card:", error);
+      // Fallback to basic card data
+      setSelectedCard(card);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleCardUpdate = (updatedCard: Card) => {
+    setSelectedCard(updatedCard);
+    // Update the card in the local list
+    setCards(cards.map(c => c.id === updatedCard.id ? updatedCard : c));
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedCard(null);
+  };
+
+  const handleCardDelete = async (cardId: string) => {
+    setCards(cards.filter(c => c.id !== cardId));
+    setIsModalOpen(false);
+    setSelectedCard(null);
   };
 
   // Filter and sort cards
@@ -195,6 +239,13 @@ export default function BacklogPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href={`/project/${projectId}/import`}
+              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
+            >
+              <Upload className="h-4 w-4" />
+              Import
+            </Link>
             {aiEnabled && (
               <button
                 onClick={handleGroom}
@@ -270,7 +321,8 @@ export default function BacklogPage() {
               {filteredCards.map((card) => (
                 <div
                   key={card.id}
-                  className="flex items-center justify-between rounded-lg border bg-white p-4 shadow-sm"
+                  onClick={() => handleCardClick(card)}
+                  className="flex items-center justify-between rounded-lg border bg-white p-4 shadow-sm hover:border-blue-300 hover:shadow-md cursor-pointer transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <span
@@ -289,7 +341,7 @@ export default function BacklogPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                     {card.story_points && (
                       <span className="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
                         {card.story_points} pts
@@ -450,6 +502,19 @@ export default function BacklogPage() {
           </div>
         </div>
       </main>
+
+      {/* Card Detail Modal */}
+      {selectedCard && boardId && (
+        <CardDetailModal
+          card={selectedCard}
+          boardId={boardId}
+          organizationId={organizationId}
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onUpdate={handleCardUpdate}
+          onDelete={handleCardDelete}
+        />
+      )}
     </div>
   );
 }
