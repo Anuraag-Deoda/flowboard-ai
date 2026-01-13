@@ -192,10 +192,10 @@ export const cardsApi = {
 
   update: async (id: string, data: Partial<{
     title: string;
-    description: string;
-    priority: string;
-    story_points: number;
-    due_date: string;
+    description: string | null;
+    priority: string | null;
+    story_points: number | null;
+    due_date: string | null;
   }>) => {
     const response = await api.put(`/cards/${id}`, data);
     return response.data;
@@ -454,6 +454,71 @@ export const sprintsApi = {
     const response = await api.get(`/sprints/${id}/metrics`);
     return response.data;
   },
+
+  // Retrospective endpoints
+  getRetrospective: async (sprintId: string) => {
+    const response = await api.get(`/sprints/${sprintId}/retrospective`);
+    return response.data;
+  },
+
+  createRetrospective: async (sprintId: string, data: {
+    what_went_well?: string;
+    what_went_wrong?: string;
+    action_items?: Array<{ description: string; assignee_id?: string; status?: string }>;
+    team_mood?: number;
+  }) => {
+    const response = await api.post(`/sprints/${sprintId}/retrospective`, data);
+    return response.data;
+  },
+
+  updateRetrospective: async (sprintId: string, data: {
+    what_went_well?: string;
+    what_went_wrong?: string;
+    action_items?: Array<{ description: string; assignee_id?: string; status?: string }>;
+    team_mood?: number;
+  }) => {
+    const response = await api.put(`/sprints/${sprintId}/retrospective`, data);
+    return response.data;
+  },
+
+  deleteRetrospective: async (sprintId: string) => {
+    const response = await api.delete(`/sprints/${sprintId}/retrospective`);
+    return response.data;
+  },
+
+  generateRetrospectiveSummary: async (sprintId: string) => {
+    const response = await api.post(`/sprints/${sprintId}/retrospective/generate-summary`);
+    return response.data;
+  },
+
+  // Sprint Notes endpoints
+  listNotes: async (sprintId: string, noteType?: string) => {
+    const response = await api.get(`/sprints/${sprintId}/notes`, {
+      params: noteType ? { note_type: noteType } : undefined,
+    });
+    return response.data;
+  },
+
+  createNote: async (sprintId: string, data: {
+    content: string;
+    note_type?: "observation" | "risk" | "decision" | "blocker";
+  }) => {
+    const response = await api.post(`/sprints/${sprintId}/notes`, data);
+    return response.data;
+  },
+
+  updateNote: async (sprintId: string, noteId: string, data: {
+    content: string;
+    note_type?: "observation" | "risk" | "decision" | "blocker";
+  }) => {
+    const response = await api.put(`/sprints/${sprintId}/notes/${noteId}`, data);
+    return response.data;
+  },
+
+  deleteNote: async (sprintId: string, noteId: string) => {
+    const response = await api.delete(`/sprints/${sprintId}/notes/${noteId}`);
+    return response.data;
+  },
 };
 
 // Daily Logs API
@@ -543,6 +608,105 @@ export const aiApi = {
       tasks_worked: tasksWorked,
       blockers,
     });
+    return response.data;
+  },
+};
+
+// Analytics API
+export const analyticsApi = {
+  getVelocity: async (projectId: string, limit?: number) => {
+    const response = await api.get("/analytics/velocity", {
+      params: { project_id: projectId, limit },
+    });
+    return response.data;
+  },
+
+  getBurndown: async (sprintId: string) => {
+    const response = await api.get(`/analytics/sprint/${sprintId}/burndown`);
+    return response.data;
+  },
+
+  getWorkload: async (projectId: string, sprintId?: string) => {
+    const response = await api.get("/analytics/workload", {
+      params: { project_id: projectId, sprint_id: sprintId },
+    });
+    return response.data;
+  },
+
+  getPersonalProductivity: async (projectId: string, days?: number) => {
+    const response = await api.get("/analytics/personal", {
+      params: { project_id: projectId, days },
+    });
+    return response.data;
+  },
+
+  getProjectSummary: async (projectId: string) => {
+    const response = await api.get("/analytics/summary", {
+      params: { project_id: projectId },
+    });
+    return response.data;
+  },
+
+  getTimeVsEstimate: async (projectId: string, sprintId?: string) => {
+    const response = await api.get("/analytics/time-vs-estimate", {
+      params: { project_id: projectId, sprint_id: sprintId },
+    });
+    return response.data;
+  },
+
+  getIndividualVelocity: async (projectId: string, sprints?: number) => {
+    const response = await api.get("/analytics/individual-velocity", {
+      params: { project_id: projectId, sprints },
+    });
+    return response.data;
+  },
+
+  getInvisibleWork: async (projectId: string, days?: number) => {
+    const response = await api.get("/analytics/invisible-work", {
+      params: { project_id: projectId, days },
+    });
+    return response.data;
+  },
+};
+
+// Import API
+export const importApi = {
+  upload: async (projectId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("project_id", projectId);
+    const response = await api.post("/import/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
+  getPreview: async (importId: string) => {
+    const response = await api.get(`/import/${importId}/preview`);
+    return response.data;
+  },
+
+  process: async (importId: string, config: {
+    column_mapping?: Record<string, string | null>;
+    use_ai?: boolean;
+  }) => {
+    const response = await api.post(`/import/${importId}/process`, config);
+    return response.data;
+  },
+
+  confirm: async (importId: string, data: {
+    tasks: Array<{ title: string; description?: string | null; priority?: string | null; story_points?: number | null }>;
+    board_id?: string;
+    column_id?: string;
+  }) => {
+    const response = await api.post(`/import/${importId}/confirm`, data);
+    return response.data;
+  },
+
+  cancel: async (importId: string) => {
+    const response = await api.delete(`/import/${importId}`);
     return response.data;
   },
 };
