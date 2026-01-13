@@ -388,3 +388,161 @@ export const labelsApi = {
     return response.data;
   },
 };
+
+// Sprints API
+export const sprintsApi = {
+  list: async (projectId: string, status?: string) => {
+    const response = await api.get("/sprints/", {
+      params: { project_id: projectId, status },
+    });
+    return response.data;
+  },
+
+  create: async (data: {
+    project_id: string;
+    name: string;
+    goal?: string;
+    start_date: string;
+    end_date: string;
+  }) => {
+    const response = await api.post("/sprints/", data);
+    return response.data;
+  },
+
+  get: async (id: string) => {
+    const response = await api.get(`/sprints/${id}`);
+    return response.data;
+  },
+
+  update: async (id: string, data: {
+    name?: string;
+    goal?: string;
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+  }) => {
+    const response = await api.put(`/sprints/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete(`/sprints/${id}`);
+    return response.data;
+  },
+
+  start: async (id: string) => {
+    const response = await api.post(`/sprints/${id}/start`);
+    return response.data;
+  },
+
+  complete: async (id: string) => {
+    const response = await api.post(`/sprints/${id}/complete`);
+    return response.data;
+  },
+
+  addCard: async (sprintId: string, cardId: string) => {
+    const response = await api.post(`/sprints/${sprintId}/cards`, { card_id: cardId });
+    return response.data;
+  },
+
+  removeCard: async (sprintId: string, cardId: string) => {
+    const response = await api.delete(`/sprints/${sprintId}/cards/${cardId}`);
+    return response.data;
+  },
+
+  getMetrics: async (id: string) => {
+    const response = await api.get(`/sprints/${id}/metrics`);
+    return response.data;
+  },
+};
+
+// Daily Logs API
+export const dailyLogsApi = {
+  list: async (projectId: string, params?: {
+    start_date?: string;
+    end_date?: string;
+    user_id?: string;
+  }) => {
+    const response = await api.get("/daily-logs/", {
+      params: { project_id: projectId, ...params },
+    });
+    return response.data;
+  },
+
+  getToday: async (projectId: string) => {
+    const response = await api.get("/daily-logs/today", {
+      params: { project_id: projectId },
+    });
+    return response.data;
+  },
+
+  createOrUpdate: async (data: {
+    project_id: string;
+    log_date?: string;
+    tasks_worked?: Array<{ card_id: string; time_spent: number; notes?: string }>;
+    remaining_work?: string;
+    blockers?: string;
+    notes?: string;
+  }) => {
+    const response = await api.post("/daily-logs/", data);
+    return response.data;
+  },
+
+  get: async (id: string) => {
+    const response = await api.get(`/daily-logs/${id}`);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete(`/daily-logs/${id}`);
+    return response.data;
+  },
+
+  getSuggestions: async (projectId: string) => {
+    const response = await api.get("/daily-logs/suggestions", {
+      params: { project_id: projectId },
+    });
+    return response.data;
+  },
+
+  getSummary: async (projectId: string, days?: number) => {
+    const response = await api.get("/daily-logs/summary", {
+      params: { project_id: projectId, days },
+    });
+    return response.data;
+  },
+};
+
+// AI API
+export const aiApi = {
+  getStatus: async () => {
+    const response = await api.get("/ai/status");
+    return response.data;
+  },
+
+  getCardSuggestions: async (cardId: string) => {
+    const response = await api.get(`/ai/card/${cardId}/suggestions`);
+    return response.data;
+  },
+
+  groomBacklog: async (projectId: string) => {
+    const response = await api.post("/ai/backlog/groom", { project_id: projectId });
+    return response.data;
+  },
+
+  generateSprintGoal: async (cardIds: string[], projectContext?: string) => {
+    const response = await api.post("/ai/sprint/goal", {
+      card_ids: cardIds,
+      project_context: projectContext,
+    });
+    return response.data;
+  },
+
+  generateDailySummary: async (tasksWorked: Array<{ title?: string; time_spent: number; notes?: string }>, blockers?: string) => {
+    const response = await api.post("/ai/daily-log/summary", {
+      tasks_worked: tasksWorked,
+      blockers,
+    });
+    return response.data;
+  },
+};

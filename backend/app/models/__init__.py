@@ -12,7 +12,7 @@ from .comment import Comment
 from .subtask import Subtask
 from .card_link import CardLink, LinkType, INVERSE_LINK_TYPES
 from .attachment import Attachment
-from .sprint import Sprint, CardSprint, SprintRetrospective, SprintNote
+from .sprint import Sprint, CardSprint, SprintRetrospective, SprintNote, SprintStatus, NoteType
 from .daily_log import DailyLog
 from .activity_log import ActivityLog
 from .domain_event import DomainEvent
@@ -38,9 +38,11 @@ __all__ = [
     "INVERSE_LINK_TYPES",
     "Attachment",
     "Sprint",
+    "SprintStatus",
     "CardSprint",
     "SprintRetrospective",
     "SprintNote",
+    "NoteType",
     "DailyLog",
     "ActivityLog",
     "DomainEvent",

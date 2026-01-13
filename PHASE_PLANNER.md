@@ -264,31 +264,31 @@ User -> Organizations (M:N via memberships)
 ### 3.1 Backlog View
 
 **Backend Tasks**
-- [ ] Backlog-specific query endpoint (cards in Backlog column)
-- [ ] Backlog ordering/prioritization
+- [x] Backlog-specific query endpoint (cards in Backlog column)
+- [x] Backlog ordering/prioritization
 - [ ] Grouping support (by Epic, Label, Priority)
 - [ ] Epic model and endpoints
 
 **Frontend Tasks**
-- [ ] Dedicated backlog page/view
-- [ ] Drag-to-prioritize list
+- [x] Dedicated backlog page/view
+- [x] Drag-to-prioritize list
 - [ ] Group by toggles
 - [ ] Epic management
-- [ ] Quick filters
+- [x] Quick filters
 
 ### 3.2 Sprint Planning
 
 **Backend Tasks**
-- [ ] Sprint model (start date, end date, goal)
-- [ ] Sprint CRUD endpoints
-- [ ] Move cards to sprint
-- [ ] Sprint capacity tracking
+- [x] Sprint model (start date, end date, goal)
+- [x] Sprint CRUD endpoints
+- [x] Move cards to sprint
+- [x] Sprint capacity tracking
 
 **Frontend Tasks**
-- [ ] Sprint planning view
-- [ ] Drag cards from backlog to sprint
-- [ ] Sprint capacity indicator
-- [ ] Active sprint board filter
+- [x] Sprint planning view
+- [x] Drag cards from backlog to sprint
+- [x] Sprint capacity indicator
+- [x] Active sprint board filter
 
 ### 3.3 Sprint Retrospectives & Context (Key Insight Layer)
 
@@ -366,7 +366,7 @@ CREATE INDEX idx_sprint_notes_sprint ON sprint_notes(sprint_id);
 ### 4.1 Daily Log System
 
 **Backend Tasks**
-- [ ] DailyLog model:
+- [x] DailyLog model:
   ```python
   user_id, date,
   tasks_worked: [{card_id, time_spent, notes}],
@@ -374,17 +374,17 @@ CREATE INDEX idx_sprint_notes_sprint ON sprint_notes(sprint_id);
   blockers: text,
   general_notes: text
   ```
-- [ ] Daily log CRUD endpoints
-- [ ] Auto-suggest tasks (cards assigned + recently touched)
-- [ ] Aggregation endpoints (by user, task, sprint, project)
+- [x] Daily log CRUD endpoints
+- [x] Auto-suggest tasks (cards assigned + recently touched)
+- [x] Aggregation endpoints (by user, task, sprint, project)
 
 **Frontend Tasks**
-- [ ] Daily log form (single-screen UX)
-- [ ] Task auto-suggestions
-- [ ] Time input per task
-- [ ] Pre-fill from yesterday's remaining work
+- [x] Daily log form (single-screen UX)
+- [x] Task auto-suggestions
+- [x] Time input per task
+- [x] Pre-fill from yesterday's remaining work
 - [ ] Calendar view of past logs
-- [ ] Quick blockers input
+- [x] Quick blockers input
 
 ### 4.2 Time Analytics
 
@@ -447,14 +447,14 @@ CREATE INDEX idx_sprint_notes_sprint ON sprint_notes(sprint_id);
 ### 6.1 AI Service Architecture
 
 **Backend Tasks**
-- [ ] AI service abstraction layer
+- [x] AI service abstraction layer
 - [ ] OpenRouter integration
-- [ ] OpenAI integration
+- [x] OpenAI integration
 - [ ] Model routing logic:
   - Document parsing → Claude/GPT-4
   - Task splitting → GPT-4/LLaMA
   - Summaries → lightweight models
-- [ ] Prompt template management
+- [x] Prompt template management
 - [ ] Response caching (Redis)
 - [ ] Rate limiting per user/org
 - [ ] Cost tracking
@@ -462,26 +462,26 @@ CREATE INDEX idx_sprint_notes_sprint ON sprint_notes(sprint_id);
 ### 6.2 AI Features - Backlog Grooming
 
 **Backend Tasks**
-- [ ] Vague task detection endpoint
-- [ ] Task splitting suggestions
-- [ ] Missing acceptance criteria detection
-- [ ] Estimation validation
+- [x] Vague task detection endpoint
+- [x] Task splitting suggestions
+- [x] Missing acceptance criteria detection
+- [x] Estimation validation
 
 **Frontend Tasks**
-- [ ] AI suggestions panel in backlog
-- [ ] Accept/reject suggestion buttons
-- [ ] Explanation tooltips
+- [x] AI suggestions panel in backlog
+- [x] Accept/reject suggestion buttons
+- [x] Explanation tooltips
 - [ ] Bulk apply suggestions
 
 ### 6.3 AI Features - Daily Summaries
 
 **Backend Tasks**
-- [ ] Daily standup summary generation
+- [x] Daily standup summary generation
 - [ ] Team progress summary
 - [ ] Risk detection (stuck tasks)
 
 **Frontend Tasks**
-- [ ] AI summary cards
+- [x] AI summary cards
 - [ ] Team daily digest view
 
 **Deliverable**: AI assists with backlog grooming, task refinement, and daily summaries
@@ -892,14 +892,14 @@ CREATE INDEX idx_sprint_notes_sprint ON sprint_notes(sprint_id);
 - [x] Phase 0: Foundation & Setup ✅
 - [x] Phase 1: Authentication & Core Structure ✅ (missing: password reset, OAuth, team UI, settings)
 - [x] Phase 2: Kanban Board Core ✅
-- [ ] Phase 3: Backlog Management
-- [ ] Phase 4: Daily Time Tracking
+- [x] Phase 3: Backlog Management ✅ (missing: Epic model, group by)
+- [x] Phase 4: Daily Time Tracking ✅ (missing: calendar view)
 - [ ] Phase 5: Document/Sheet Import
-- [ ] Phase 6: AI Integration Layer
+- [x] Phase 6: AI Integration Layer ✅ (missing: OpenRouter, caching, rate limiting)
 - [ ] Phase 7: Reporting & Analytics
 
 **MVP Target**: Phases 0-7
-**Current Progress**: ~45% of MVP complete
+**Current Progress**: ~70% of MVP complete
 
 ---
 
