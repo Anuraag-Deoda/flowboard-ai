@@ -97,13 +97,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   createCard: async (columnId, title, options) => {
-    const data = await cardsApi.create({
+    // Only include optional fields if they have values
+    const payload: { column_id: string; title: string; priority?: string; story_points?: number; description?: string } = {
       column_id: columnId,
       title,
-      priority: options?.priority,
-      story_points: options?.story_points,
-      description: options?.description,
-    });
+    };
+    if (options?.priority) payload.priority = options.priority;
+    if (options?.story_points) payload.story_points = options.story_points;
+    if (options?.description) payload.description = options.description;
+
+    const data = await cardsApi.create(payload);
     const { board } = get();
     if (board) {
       await get().fetchBoard(board.id);
