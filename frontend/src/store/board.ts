@@ -10,7 +10,7 @@ interface BoardState {
 
   fetchBoard: (boardId: string) => Promise<void>;
   moveCard: (cardId: string, targetColumnId: string, targetPosition: number) => Promise<void>;
-  createCard: (columnId: string, title: string) => Promise<Card>;
+  createCard: (columnId: string, title: string, options?: { priority?: string; story_points?: number; description?: string }) => Promise<Card>;
   updateCard: (cardId: string, data: Partial<Card>) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
   createColumn: (name: string) => Promise<void>;
@@ -96,8 +96,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
-  createCard: async (columnId, title) => {
-    const data = await cardsApi.create({ column_id: columnId, title });
+  createCard: async (columnId, title, options) => {
+    const data = await cardsApi.create({
+      column_id: columnId,
+      title,
+      priority: options?.priority,
+      story_points: options?.story_points,
+      description: options?.description,
+    });
     const { board } = get();
     if (board) {
       await get().fetchBoard(board.id);

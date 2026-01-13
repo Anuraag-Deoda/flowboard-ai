@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Eye, Edit3 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Eye, Edit3, Bold, Italic, List, ListOrdered, Code, Link, Heading2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MarkdownEditorProps {
@@ -62,55 +62,108 @@ function renderMarkdown(text: string): string {
 
 export function MarkdownEditor({ value, onChange, placeholder, className }: MarkdownEditorProps) {
   const [isPreview, setIsPreview] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertText = (before: string, after: string = "") => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = value.substring(start, end);
+    const newText = value.substring(0, start) + before + selectedText + after + value.substring(end);
+    onChange(newText);
+
+    // Restore cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, end + before.length);
+    }, 0);
+  };
+
+  const formatButtons = [
+    { icon: Bold, action: () => insertText("**", "**"), title: "Bold" },
+    { icon: Italic, action: () => insertText("_", "_"), title: "Italic" },
+    { icon: Heading2, action: () => insertText("## "), title: "Heading" },
+    { icon: Code, action: () => insertText("`", "`"), title: "Code" },
+    { icon: List, action: () => insertText("- "), title: "Bullet list" },
+    { icon: ListOrdered, action: () => insertText("1. "), title: "Numbered list" },
+    { icon: Link, action: () => insertText("[", "](url)"), title: "Link" },
+  ];
 
   return (
-    <div className={cn("rounded-lg border border-gray-300", className)}>
+    <div className={cn("rounded-xl border border-gray-200 bg-white overflow-hidden", className)}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-1.5">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setIsPreview(false)}
-            className={cn(
-              "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
-              !isPreview
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            )}
-          >
-            <Edit3 className="h-3 w-3" />
-            Write
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsPreview(true)}
-            className={cn(
-              "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
-              isPreview
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            )}
-          >
-            <Eye className="h-3 w-3" />
-            Preview
-          </button>
+      <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-3 py-2">
+        <div className="flex items-center gap-2">
+          {/* Write/Preview toggle */}
+          <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
+            <button
+              type="button"
+              onClick={() => setIsPreview(false)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all",
+                !isPreview
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              <Edit3 className="h-3.5 w-3.5" />
+              Write
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPreview(true)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all",
+                isPreview
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Preview
+            </button>
+          </div>
+
+          {/* Formatting buttons */}
+          {!isPreview && (
+            <>
+              <div className="h-4 w-px bg-gray-200" />
+              <div className="flex items-center gap-0.5">
+                {formatButtons.map(({ icon: Icon, action, title }) => (
+                  <button
+                    key={title}
+                    type="button"
+                    onClick={action}
+                    title={title}
+                    className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-        <span className="text-xs text-gray-500">Markdown supported</span>
       </div>
 
       {/* Content */}
       {isPreview ? (
         <div
-          className="prose prose-sm max-w-none p-3 min-h-[150px] text-sm text-gray-700"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(value) || "<span class='text-gray-400'>Nothing to preview</span>" }}
+          className="prose prose-sm max-w-none p-4 min-h-[150px] text-sm text-gray-700"
+          dangerouslySetInnerHTML={{
+            __html: renderMarkdown(value) || "<span class='text-gray-400 italic'>Nothing to preview</span>"
+          }}
         />
       ) : (
         <textarea
+          ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={6}
-          className="w-full resize-none border-0 px-3 py-2 text-sm focus:outline-none focus:ring-0"
-          placeholder={placeholder || "Write your description here... (Markdown supported)"}
+          className="w-full resize-none border-0 bg-transparent px-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+          placeholder={placeholder || "Write your description here... Use **bold**, _italic_, or # headings"}
         />
       )}
     </div>

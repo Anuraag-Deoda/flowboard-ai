@@ -6,8 +6,22 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
 import { organizationsApi, workspacesApi, projectsApi, boardsApi } from "@/lib/api";
 import type { Organization, Workspace, Project, Board } from "@/types";
-import { Plus, Building2, Folder, Layout } from "lucide-react";
+import {
+  Plus,
+  Building2,
+  Folder,
+  Layout,
+  Sparkles,
+  Calendar,
+  Clock,
+  ArrowRight,
+  Settings,
+  Bell,
+  Search,
+  ChevronRight,
+} from "lucide-react";
 import { CreateModal } from "@/components/modals/CreateModal";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -150,28 +164,69 @@ export default function DashboardPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg text-gray-500">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-gray-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 animate-pulse" />
+            <div className="absolute inset-0 h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 animate-ping opacity-20" />
+          </div>
+          <div className="text-sm font-medium text-gray-500">Loading dashboard...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
       {/* Header */}
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-600" />
-            <span className="text-xl font-bold text-gray-900">FlowBoard AI</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {user?.full_name || user?.email}
+      <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+              FlowBoard AI
             </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative hidden md:block">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="w-48 rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-4 text-sm placeholder:text-gray-400 focus:bg-white focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+              />
+            </div>
+
+            <button className="relative rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <Bell className="h-5 w-5" />
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+            </button>
+
+            <button className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <Settings className="h-5 w-5" />
+            </button>
+
+            <div className="h-6 w-px bg-gray-200" />
+
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-sm font-semibold text-white">
+                {(user?.full_name || user?.email || "?")[0].toUpperCase()}
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm font-medium text-gray-900">
+                  {user?.full_name || "User"}
+                </p>
+                <p className="text-xs text-gray-500">{user?.email}</p>
+              </div>
+            </div>
+
             <button
               onClick={logout}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
             >
               Sign out
             </button>
@@ -181,17 +236,27 @@ export default function DashboardPage() {
 
       {/* Main */}
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 md:grid-cols-4">
+        {/* Welcome section */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.full_name?.split(" ")[0] || "there"}!
+          </h1>
+          <p className="mt-1 text-gray-500">Here's what's happening across your workspaces</p>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-4">
           {/* Organizations */}
-          <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-semibold text-gray-900">
-                <Building2 className="h-4 w-4" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100">
+                  <Building2 className="h-3.5 w-3.5 text-purple-600" />
+                </div>
                 Organizations
               </h2>
               <button
                 onClick={() => setCreateOrgModalOpen(true)}
-                className="rounded p-1 hover:bg-gray-100"
+                className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors"
               >
                 <Plus className="h-4 w-4 text-gray-500" />
               </button>
@@ -201,34 +266,44 @@ export default function DashboardPage() {
                 <button
                   key={org.id}
                   onClick={() => setSelectedOrg(org)}
-                  className={`w-full rounded px-3 py-2 text-left text-sm ${
+                  className={cn(
+                    "w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-all",
                     selectedOrg?.id === org.id
-                      ? "bg-blue-50 text-blue-700"
+                      ? "bg-purple-50 text-purple-700 ring-1 ring-purple-200"
                       : "text-gray-600 hover:bg-gray-50"
-                  }`}
+                  )}
                 >
                   {org.name}
                 </button>
               ))}
               {organizations.length === 0 && (
-                <p className="py-2 text-center text-sm text-gray-500">
-                  No organizations yet
-                </p>
+                <div className="py-6 text-center">
+                  <Building2 className="mx-auto h-8 w-8 text-gray-300" />
+                  <p className="mt-2 text-sm text-gray-500">No organizations yet</p>
+                  <button
+                    onClick={() => setCreateOrgModalOpen(true)}
+                    className="mt-2 text-sm font-medium text-purple-600 hover:text-purple-700"
+                  >
+                    Create your first organization
+                  </button>
+                </div>
               )}
             </div>
           </div>
 
           {/* Workspaces */}
-          <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-semibold text-gray-900">
-                <Folder className="h-4 w-4" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100">
+                  <Folder className="h-3.5 w-3.5 text-blue-600" />
+                </div>
                 Workspaces
               </h2>
               <button
                 onClick={() => setCreateWorkspaceModalOpen(true)}
                 disabled={!selectedOrg}
-                className="rounded p-1 hover:bg-gray-100 disabled:opacity-50"
+                className="rounded-lg p-1.5 hover:bg-gray-100 disabled:opacity-50 transition-colors"
               >
                 <Plus className="h-4 w-4 text-gray-500" />
               </button>
@@ -238,34 +313,43 @@ export default function DashboardPage() {
                 <button
                   key={ws.id}
                   onClick={() => setSelectedWorkspace(ws)}
-                  className={`w-full rounded px-3 py-2 text-left text-sm ${
+                  className={cn(
+                    "w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-all",
                     selectedWorkspace?.id === ws.id
-                      ? "bg-blue-50 text-blue-700"
+                      ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
                       : "text-gray-600 hover:bg-gray-50"
-                  }`}
+                  )}
                 >
                   {ws.name}
                 </button>
               ))}
               {workspaces.length === 0 && selectedOrg && (
-                <p className="py-2 text-center text-sm text-gray-500">
-                  No workspaces yet
-                </p>
+                <div className="py-6 text-center">
+                  <Folder className="mx-auto h-8 w-8 text-gray-300" />
+                  <p className="mt-2 text-sm text-gray-500">No workspaces yet</p>
+                </div>
+              )}
+              {!selectedOrg && (
+                <div className="py-4 text-center">
+                  <p className="text-sm text-gray-400">Select an organization first</p>
+                </div>
               )}
             </div>
           </div>
 
           {/* Projects */}
-          <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-semibold text-gray-900">
-                <Folder className="h-4 w-4" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100">
+                  <Folder className="h-3.5 w-3.5 text-emerald-600" />
+                </div>
                 Projects
               </h2>
               <button
                 onClick={() => setCreateProjectModalOpen(true)}
                 disabled={!selectedWorkspace}
-                className="rounded p-1 hover:bg-gray-100 disabled:opacity-50"
+                className="rounded-lg p-1.5 hover:bg-gray-100 disabled:opacity-50 transition-colors"
               >
                 <Plus className="h-4 w-4 text-gray-500" />
               </button>
@@ -275,34 +359,43 @@ export default function DashboardPage() {
                 <button
                   key={proj.id}
                   onClick={() => setSelectedProject(proj)}
-                  className={`w-full rounded px-3 py-2 text-left text-sm ${
+                  className={cn(
+                    "w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-all",
                     selectedProject?.id === proj.id
-                      ? "bg-blue-50 text-blue-700"
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
                       : "text-gray-600 hover:bg-gray-50"
-                  }`}
+                  )}
                 >
                   {proj.name}
                 </button>
               ))}
               {projects.length === 0 && selectedWorkspace && (
-                <p className="py-2 text-center text-sm text-gray-500">
-                  No projects yet
-                </p>
+                <div className="py-6 text-center">
+                  <Folder className="mx-auto h-8 w-8 text-gray-300" />
+                  <p className="mt-2 text-sm text-gray-500">No projects yet</p>
+                </div>
+              )}
+              {!selectedWorkspace && (
+                <div className="py-4 text-center">
+                  <p className="text-sm text-gray-400">Select a workspace first</p>
+                </div>
               )}
             </div>
           </div>
 
           {/* Boards */}
-          <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-semibold text-gray-900">
-                <Layout className="h-4 w-4" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100">
+                  <Layout className="h-3.5 w-3.5 text-amber-600" />
+                </div>
                 Boards
               </h2>
               <button
                 onClick={() => setCreateBoardModalOpen(true)}
                 disabled={!selectedProject}
-                className="rounded p-1 hover:bg-gray-100 disabled:opacity-50"
+                className="rounded-lg p-1.5 hover:bg-gray-100 disabled:opacity-50 transition-colors"
               >
                 <Plus className="h-4 w-4 text-gray-500" />
               </button>
@@ -312,19 +405,82 @@ export default function DashboardPage() {
                 <Link
                   key={board.id}
                   href={`/board/${board.id}`}
-                  className="block w-full rounded px-3 py-2 text-left text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                  className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-amber-50 hover:text-amber-700 transition-all"
                 >
-                  {board.name}
+                  <span>{board.name}</span>
+                  <ChevronRight className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               ))}
               {boards.length === 0 && selectedProject && (
-                <p className="py-2 text-center text-sm text-gray-500">
-                  No boards yet
-                </p>
+                <div className="py-6 text-center">
+                  <Layout className="mx-auto h-8 w-8 text-gray-300" />
+                  <p className="mt-2 text-sm text-gray-500">No boards yet</p>
+                  <button
+                    onClick={() => setCreateBoardModalOpen(true)}
+                    className="mt-2 text-sm font-medium text-amber-600 hover:text-amber-700"
+                  >
+                    Create your first board
+                  </button>
+                </div>
+              )}
+              {!selectedProject && (
+                <div className="py-4 text-center">
+                  <p className="text-sm text-gray-400">Select a project first</p>
+                </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Quick access to project features */}
+        {selectedProject && (
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Access</h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Link
+                href={`/project/${selectedProject.id}/sprints`}
+                className="group flex items-center gap-4 rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">Sprints</h3>
+                  <p className="text-sm text-gray-500">Manage sprint planning</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+
+              <Link
+                href={`/project/${selectedProject.id}/backlog`}
+                className="group flex items-center gap-4 rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 hover:border-purple-300 hover:shadow-md transition-all"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">Backlog</h3>
+                  <p className="text-sm text-gray-500">AI-powered grooming</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+
+              <Link
+                href={`/project/${selectedProject.id}/daily-log`}
+                className="group flex items-center gap-4 rounded-xl border border-gray-200/80 bg-white/80 backdrop-blur-sm p-4 hover:border-emerald-300 hover:shadow-md transition-all"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                  <Clock className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">Daily Log</h3>
+                  <p className="text-sm text-gray-500">Track your time</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Create Modals */}
