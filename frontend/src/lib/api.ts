@@ -248,6 +248,108 @@ export const columnsApi = {
   },
 };
 
+// Organization Members API
+export const membersApi = {
+  list: async (organizationId: string) => {
+    const response = await api.get(`/organizations/${organizationId}/members`);
+    return response.data;
+  },
+};
+
+// Card Assignees API
+export const assigneesApi = {
+  assign: async (cardId: string, userId: string) => {
+    const response = await api.post(`/cards/${cardId}/assignees`, { user_id: userId });
+    return response.data;
+  },
+
+  unassign: async (cardId: string, userId: string) => {
+    const response = await api.delete(`/cards/${cardId}/assignees/${userId}`);
+    return response.data;
+  },
+};
+
+// Activity Logs API
+export const activityApi = {
+  getCardActivity: async (cardId: string) => {
+    const response = await api.get(`/cards/${cardId}/activity`);
+    return response.data;
+  },
+};
+
+// Subtasks API
+export const subtasksApi = {
+  list: async (cardId: string) => {
+    const response = await api.get(`/cards/${cardId}/subtasks`);
+    return response.data;
+  },
+
+  create: async (cardId: string, title: string) => {
+    const response = await api.post(`/cards/${cardId}/subtasks`, { title });
+    return response.data;
+  },
+
+  update: async (cardId: string, subtaskId: string, data: { title?: string; is_completed?: boolean; position?: number }) => {
+    const response = await api.put(`/cards/${cardId}/subtasks/${subtaskId}`, data);
+    return response.data;
+  },
+
+  delete: async (cardId: string, subtaskId: string) => {
+    const response = await api.delete(`/cards/${cardId}/subtasks/${subtaskId}`);
+    return response.data;
+  },
+};
+
+// Card Links API
+export const cardLinksApi = {
+  list: async (cardId: string) => {
+    const response = await api.get(`/cards/${cardId}/links`);
+    return response.data;
+  },
+
+  create: async (cardId: string, targetCardId: string, linkType: string) => {
+    const response = await api.post(`/cards/${cardId}/links`, {
+      target_card_id: targetCardId,
+      link_type: linkType,
+    });
+    return response.data;
+  },
+
+  delete: async (cardId: string, linkId: string) => {
+    const response = await api.delete(`/cards/${cardId}/links/${linkId}`);
+    return response.data;
+  },
+};
+
+// Attachments API
+export const attachmentsApi = {
+  list: async (cardId: string) => {
+    const response = await api.get(`/cards/${cardId}/attachments`);
+    return response.data;
+  },
+
+  upload: async (cardId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post(`/cards/${cardId}/attachments`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
+  delete: async (cardId: string, attachmentId: string) => {
+    const response = await api.delete(`/cards/${cardId}/attachments/${attachmentId}`);
+    return response.data;
+  },
+
+  getDownloadUrl: (cardId: string, attachmentId: string) => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    return `${baseUrl}/cards/${cardId}/attachments/${attachmentId}/download`;
+  },
+};
+
 // Labels API
 export const labelsApi = {
   list: async (boardId: string) => {
