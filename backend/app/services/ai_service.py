@@ -208,6 +208,140 @@ Respond with just the summary text."""
             logger.error(f"AI daily log summary failed: {e}")
             return None
 
+    def generate_retrospective_summary(self, sprint_context: dict) -> Optional[dict]:
+        """Generate AI summary and insights for a sprint retrospective."""
+        if not self.enabled:
+            return None
+
+        try:
+            # Build context summary
+            notes_summary = ""
+            if sprint_context.get("notes"):
+                notes_by_type = {}
+                for note in sprint_context["notes"]:
+                    note_type = note.get("note_type", "general")
+                    if note_type not in notes_by_type:
+                        notes_by_type[note_type] = []
+                    notes_by_type[note_type].append(note.get("content", ""))
+
+                for ntype, contents in notes_by_type.items():
+                    notes_summary += f"\n{ntype.upper()}:\n" + "\n".join(f"- {c}" for c in contents)
+
+            retro_data = sprint_context.get("retrospective", {}) or {}
+
+            prompt = f"""Analyze this sprint and generate a retrospective summary with actionable insights.
+
+SPRINT DATA:
+- Name: {sprint_context.get('sprint_name', 'N/A')}
+- Goal: {sprint_context.get('sprint_goal', 'Not specified')}
+- Total cards: {sprint_context.get('total_cards', 0)}
+- Completed: {sprint_context.get('completed_cards', 0)}
+- Incomplete tasks: {', '.join(sprint_context.get('incomplete_cards', [])[:10]) or 'None'}
+- Completed tasks: {', '.join(sprint_context.get('completed_titles', [])[:10]) or 'None'}
+
+TEAM NOTES DURING SPRINT:{notes_summary or ' None recorded'}
+
+RETROSPECTIVE INPUTS:
+- What went well: {retro_data.get('what_went_well', 'Not provided')}
+- What went wrong: {retro_data.get('what_went_wrong', 'Not provided')}
+- Team mood (1-5): {retro_data.get('team_mood', 'Not rated')}
+
+Please provide:
+1. A concise summary (2-3 paragraphs) of the sprint outcome
+2. Key insights and patterns detected
+3. Specific, actionable recommendations for the next sprint
+
+Respond in JSON format:
+{{
+    "summary": "...",
+    "insights": [
+        {{"category": "velocity|scope|blockers|collaboration|quality", "finding": "...", "severity": "info|warning|critical"}}
+    ],
+    "recommendations": [
+        {{"action": "...", "priority": "high|medium|low", "rationale": "..."}}
+    ],
+    "health_score": <1-10>,
+    "key_wins": ["win1", "win2"],
+    "areas_for_improvement": ["area1", "area2"]
+}}"""
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an experienced agile coach helping teams reflect on sprints. Provide honest, constructive feedback. Focus on patterns and actionable improvements, not blame.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=1000,
+            )
+
+            return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"AI retrospective summary generation failed: {e}")
+            return None
+
+    def enhance_imported_tasks(self, tasks: list[dict]) -> Optional[dict]:
+        """Enhance imported tasks with AI suggestions."""
+        if not self.enabled:
+            return None
+
+        try:
+            tasks_summary = "\n".join(
+                [f"- {t.get('title', 'N/A')}: {t.get('description', 'No description')[:100]}"
+                 for t in tasks[:20]]
+            )
+
+            prompt = f"""Analyze these imported tasks and provide enhancement suggestions:
+
+IMPORTED TASKS:
+{tasks_summary}
+
+For each task, analyze and provide:
+1. Improved/clarified title if it's vague
+2. Suggested priority (P0-P4) if not set
+3. Estimated story points (1, 2, 3, 5, 8, 13) based on complexity
+4. Any subtasks that could be broken out
+5. Flag potential duplicate or related tasks
+
+Respond in JSON format:
+{{
+    "enhanced_tasks": [
+        {{
+            "original_title": "...",
+            "suggested_title": "..." or null if no change needed,
+            "suggested_priority": "P0|P1|P2|P3|P4" or null,
+            "suggested_points": <number> or null,
+            "subtasks": ["subtask1", ...] or [],
+            "notes": "any suggestions or flags"
+        }}
+    ],
+    "potential_duplicates": [
+        {{"tasks": ["title1", "title2"], "reason": "..."}}
+    ],
+    "suggestions": ["overall suggestion 1", "..."]
+}}"""
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an agile coach helping refine imported task lists. Be practical and concise.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=1500,
+            )
+
+            return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"AI task enhancement failed: {e}")
+            return None
+
 
 # Singleton instance
 _ai_service = None
