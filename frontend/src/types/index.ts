@@ -454,3 +454,41 @@ export interface DomainEvent {
   metadata: Record<string, any>;
   created_at: string;
 }
+
+// Notification types
+export type NotificationType =
+  | "card_assigned"
+  | "card_mentioned"
+  | "card_commented"
+  | "card_due_soon"
+  | "card_overdue"
+  | "card_moved"
+  | "sprint_started"
+  | "sprint_completed"
+  | "sprint_ending_soon"
+  | "added_to_project"
+  | "added_to_organization"
+  | "card_blocked"
+  | "subtask_completed";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  is_read: boolean;
+  card_id: string | null;
+  project_id: string | null;
+  sprint_id: string | null;
+  organization_id: string | null;
+  actor_id: string | null;
+  actor: User | null;
+  action_url: string | null;
+  created_at: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  unread_count: number;
+}

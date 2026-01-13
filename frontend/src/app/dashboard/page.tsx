@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
-import { organizationsApi, workspacesApi, projectsApi, boardsApi } from "@/lib/api";
+import { organizationsApi, workspacesApi, projectsApi, boardsApi, templatesApi } from "@/lib/api";
 import type { Organization, Workspace, Project, Board } from "@/types";
 import {
   Plus,
@@ -16,12 +16,14 @@ import {
   Clock,
   ArrowRight,
   Settings,
-  Bell,
   Search,
   ChevronRight,
   BarChart3,
+  LayoutTemplate,
 } from "lucide-react";
 import { CreateModal } from "@/components/modals/CreateModal";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { TemplatePickerModal } from "@/components/modals/TemplatePickerModal";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -42,6 +44,7 @@ export default function DashboardPage() {
   const [createWorkspaceModalOpen, setCreateWorkspaceModalOpen] = useState(false);
   const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
   const [createBoardModalOpen, setCreateBoardModalOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   // Check auth on mount
   useEffect(() => {
@@ -202,10 +205,7 @@ export default function DashboardPage() {
               />
             </div>
 
-            <button className="relative rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
-            </button>
+            <NotificationDropdown />
 
             <button className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
               <Settings className="h-5 w-5" />
@@ -393,13 +393,24 @@ export default function DashboardPage() {
                 </div>
                 Boards
               </h2>
-              <button
-                onClick={() => setCreateBoardModalOpen(true)}
-                disabled={!selectedProject}
-                className="rounded-lg p-1.5 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-              >
-                <Plus className="h-4 w-4 text-gray-500" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setTemplatePickerOpen(true)}
+                  disabled={!selectedProject}
+                  className="rounded-lg p-1.5 hover:bg-purple-50 disabled:opacity-50 transition-colors"
+                  title="Create from template"
+                >
+                  <LayoutTemplate className="h-4 w-4 text-purple-500" />
+                </button>
+                <button
+                  onClick={() => setCreateBoardModalOpen(true)}
+                  disabled={!selectedProject}
+                  className="rounded-lg p-1.5 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                  title="Create blank board"
+                >
+                  <Plus className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
             </div>
             <div className="space-y-1">
               {boards.map((board) => (
@@ -416,12 +427,21 @@ export default function DashboardPage() {
                 <div className="py-6 text-center">
                   <Layout className="mx-auto h-8 w-8 text-gray-300" />
                   <p className="mt-2 text-sm text-gray-500">No boards yet</p>
-                  <button
-                    onClick={() => setCreateBoardModalOpen(true)}
-                    className="mt-2 text-sm font-medium text-amber-600 hover:text-amber-700"
-                  >
-                    Create your first board
-                  </button>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <button
+                      onClick={() => setTemplatePickerOpen(true)}
+                      className="text-sm font-medium text-purple-600 hover:text-purple-700 flex items-center justify-center gap-1.5"
+                    >
+                      <LayoutTemplate className="h-4 w-4" />
+                      Use a template
+                    </button>
+                    <button
+                      onClick={() => setCreateBoardModalOpen(true)}
+                      className="text-sm font-medium text-amber-600 hover:text-amber-700"
+                    >
+                      or create blank board
+                    </button>
+                  </div>
                 </div>
               )}
               {!selectedProject && (
@@ -532,6 +552,18 @@ export default function DashboardPage() {
         entityName="Board"
         showDescription
       />
+
+      {selectedProject && (
+        <TemplatePickerModal
+          isOpen={templatePickerOpen}
+          onClose={() => setTemplatePickerOpen(false)}
+          projectId={selectedProject.id}
+          onSelect={async (templateId, customName) => {
+            const data = await templatesApi.apply(templateId, selectedProject.id, customName);
+            setBoards([...boards, data.board]);
+          }}
+        />
+      )}
     </div>
   );
 }

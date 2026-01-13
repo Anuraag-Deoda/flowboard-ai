@@ -37,6 +37,7 @@ import { useBoardStore } from "@/store/board";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
 import { KanbanCard } from "@/components/board/KanbanCard";
 import { CardDetailModal } from "@/components/board/CardDetailModal";
+import { ExportDropdown } from "@/components/board/ExportDropdown";
 import { cn } from "@/lib/utils";
 import type { Card, Column } from "@/types";
 
@@ -315,6 +316,11 @@ export default function BoardPage() {
                 <List className="h-4 w-4" />
               </button>
             </div>
+
+            {/* Export dropdown */}
+            {board && (
+              <ExportDropdown boardId={boardId} boardName={board.name} />
+            )}
 
             {/* More options */}
             <button className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">

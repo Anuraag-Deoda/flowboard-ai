@@ -56,3 +56,4 @@ docker-compose.override.yml
 *.bak
 *.tmp
 .cache/
+*.md

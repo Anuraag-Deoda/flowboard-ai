@@ -16,6 +16,7 @@ from .sprint import Sprint, CardSprint, SprintRetrospective, SprintNote, SprintS
 from .daily_log import DailyLog
 from .activity_log import ActivityLog
 from .domain_event import DomainEvent
+from .notification import Notification, NotificationType
 
 __all__ = [
     "User",
@@ -46,4 +47,6 @@ __all__ = [
     "DailyLog",
     "ActivityLog",
     "DomainEvent",
+    "Notification",
+    "NotificationType",
 ]

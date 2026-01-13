@@ -163,6 +163,26 @@ export const boardsApi = {
     const response = await api.get(`/boards/${id}`);
     return response.data;
   },
+
+  exportCsv: async (boardId: string) => {
+    const response = await api.get(`/boards/${boardId}/export`, {
+      params: { format: "csv" },
+      responseType: "blob",
+    });
+    return response.data;
+  },
+
+  exportJson: async (boardId: string) => {
+    const response = await api.get(`/boards/${boardId}/export`, {
+      params: { format: "json" },
+    });
+    return response.data;
+  },
+
+  getExportSummary: async (boardId: string) => {
+    const response = await api.get(`/boards/${boardId}/export/summary`);
+    return response.data;
+  },
 };
 
 // Cards API
@@ -691,6 +711,7 @@ export const importApi = {
   process: async (importId: string, config: {
     column_mapping?: Record<string, string | null>;
     use_ai?: boolean;
+    use_smart_titles?: boolean;
   }) => {
     const response = await api.post(`/import/${importId}/process`, config);
     return response.data;
@@ -707,6 +728,74 @@ export const importApi = {
 
   cancel: async (importId: string) => {
     const response = await api.delete(`/import/${importId}`);
+    return response.data;
+  },
+
+  // AI-powered analysis of import structure
+  aiAnalyze: async (importId: string) => {
+    const response = await api.post(`/import/${importId}/ai-analyze`);
+    return response.data;
+  },
+
+  // Re-detect headers from a specific row
+  redetectHeaders: async (importId: string, headerRow: number) => {
+    const response = await api.post(`/import/${importId}/redetect-headers`, {
+      header_row: headerRow,
+    });
+    return response.data;
+  },
+};
+
+// Notifications API
+export const notificationsApi = {
+  list: async (params?: { unread_only?: boolean; limit?: number; offset?: number }) => {
+    const response = await api.get("/notifications", { params });
+    return response.data;
+  },
+
+  getUnreadCount: async () => {
+    const response = await api.get("/notifications/unread-count");
+    return response.data;
+  },
+
+  markAsRead: async (notificationId: string) => {
+    const response = await api.post(`/notifications/${notificationId}/read`);
+    return response.data;
+  },
+
+  markAllAsRead: async () => {
+    const response = await api.post("/notifications/read-all");
+    return response.data;
+  },
+
+  delete: async (notificationId: string) => {
+    const response = await api.delete(`/notifications/${notificationId}`);
+    return response.data;
+  },
+
+  clearAll: async () => {
+    const response = await api.delete("/notifications/clear-all");
+    return response.data;
+  },
+};
+
+// Templates API
+export const templatesApi = {
+  list: async () => {
+    const response = await api.get("/templates");
+    return response.data;
+  },
+
+  get: async (templateId: string) => {
+    const response = await api.get(`/templates/${templateId}`);
+    return response.data;
+  },
+
+  apply: async (templateId: string, projectId: string, name?: string) => {
+    const response = await api.post(`/templates/${templateId}/apply`, {
+      project_id: projectId,
+      name,
+    });
     return response.data;
   },
 };

@@ -284,44 +284,71 @@ Respond in JSON format:
             return None
 
     def enhance_imported_tasks(self, tasks: list[dict]) -> Optional[dict]:
-        """Enhance imported tasks with AI suggestions."""
+        """Enhance imported tasks with AI suggestions and intelligent analysis."""
         if not self.enabled:
             return None
 
         try:
-            tasks_summary = "\n".join(
-                [f"- {t.get('title', 'N/A')}: {t.get('description', 'No description')[:100]}"
-                 for t in tasks[:20]]
-            )
+            # Build a rich summary including all available fields
+            tasks_summary = []
+            for t in tasks[:25]:
+                task_info = f"- {t.get('title', 'N/A')}"
+                if t.get('description'):
+                    task_info += f" | Desc: {t.get('description', '')[:80]}..."
+                if t.get('priority'):
+                    task_info += f" | Priority: {t.get('priority')}"
+                if t.get('story_points'):
+                    task_info += f" | Points: {t.get('story_points')}"
+                if t.get('status'):
+                    task_info += f" | Status: {t.get('status')}"
+                if t.get('assignee'):
+                    task_info += f" | Assignee: {t.get('assignee')}"
+                tasks_summary.append(task_info)
 
-            prompt = f"""Analyze these imported tasks and provide enhancement suggestions:
+            prompt = f"""Analyze these imported tasks and provide intelligent enhancement suggestions:
 
 IMPORTED TASKS:
-{tasks_summary}
+{chr(10).join(tasks_summary)}
 
-For each task, analyze and provide:
-1. Improved/clarified title if it's vague
-2. Suggested priority (P0-P4) if not set
-3. Estimated story points (1, 2, 3, 5, 8, 13) based on complexity
-4. Any subtasks that could be broken out
-5. Flag potential duplicate or related tasks
+ANALYSIS REQUIRED:
+1. For tasks with vague or overly short titles (like numbers or single words), suggest a better title based on context
+2. Identify tasks that appear to be parent tasks vs subtasks
+3. Suggest priorities (P0=Critical, P1=High, P2=Medium, P3=Low, P4=Lowest) based on task nature
+4. Estimate story points (1, 2, 3, 5, 8, 13) based on apparent complexity
+5. Flag potential duplicates or highly related tasks that could be merged
+6. Identify any tasks that should be broken down into subtasks
+7. Detect the overall project type and recommend workflow improvements
 
 Respond in JSON format:
 {{
     "enhanced_tasks": [
         {{
             "original_title": "...",
-            "suggested_title": "..." or null if no change needed,
+            "suggested_title": "..." or null if title is already good,
+            "title_issue": "too_short|vague|is_number|none",
             "suggested_priority": "P0|P1|P2|P3|P4" or null,
-            "suggested_points": <number> or null,
-            "subtasks": ["subtask1", ...] or [],
-            "notes": "any suggestions or flags"
+            "priority_reason": "brief explanation",
+            "suggested_points": <number 1-13> or null,
+            "points_reason": "brief explanation",
+            "is_likely_parent_task": true/false,
+            "suggested_subtasks": ["subtask1", ...] or [],
+            "notes": "any other suggestions"
         }}
     ],
     "potential_duplicates": [
-        {{"tasks": ["title1", "title2"], "reason": "..."}}
+        {{"tasks": ["title1", "title2"], "similarity": "high|medium", "reason": "..."}}
     ],
-    "suggestions": ["overall suggestion 1", "..."]
+    "related_task_groups": [
+        {{"group_name": "...", "tasks": ["task1", "task2"], "suggestion": "..."}}
+    ],
+    "project_analysis": {{
+        "detected_type": "software_development|marketing|design|operations|research|general",
+        "detected_methodology": "agile|waterfall|kanban|hybrid|unclear",
+        "overall_quality": "high|medium|low",
+        "missing_info": ["what's commonly missing from these tasks"]
+    }},
+    "workflow_suggestions": ["suggestion 1", "suggestion 2"],
+    "import_warnings": ["any concerns about the data quality"]
 }}"""
 
             response = self.client.chat.completions.create(
@@ -329,17 +356,104 @@ Respond in JSON format:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an agile coach helping refine imported task lists. Be practical and concise.",
+                        "content": """You are an expert project manager and agile coach analyzing imported task data.
+Your goal is to help transform raw imported data into well-structured, actionable tasks.
+Be practical, specific, and focus on improvements that will make the tasks clearer and more actionable.
+When suggesting titles, make them action-oriented (start with verbs like "Implement", "Create", "Fix", "Update").
+For story points, consider: 1=trivial, 2=small, 3=medium, 5=large, 8=very large, 13=epic-sized.""",
                     },
                     {"role": "user", "content": prompt},
                 ],
                 response_format={"type": "json_object"},
-                max_tokens=1500,
+                max_tokens=2000,
             )
 
             return json.loads(response.choices[0].message.content)
         except Exception as e:
             logger.error(f"AI task enhancement failed: {e}")
+            return None
+
+    def analyze_spreadsheet_structure(self, headers: list, sample_rows: list, raw_preview: str = "") -> Optional[dict]:
+        """Use AI to analyze spreadsheet structure and suggest optimal column mappings."""
+        if not self.enabled:
+            return None
+
+        try:
+            # Build context about the data
+            headers_info = ", ".join(headers[:15])
+            sample_data = []
+            for row in sample_rows[:5]:
+                row_preview = " | ".join([f"{k}: {str(v)[:30]}" for k, v in list(row.items())[:8] if v])
+                sample_data.append(row_preview)
+
+            prompt = f"""Analyze this spreadsheet structure and determine the best column mappings for a task management system.
+
+DETECTED HEADERS: {headers_info}
+
+SAMPLE DATA (first 5 rows):
+{chr(10).join(sample_data)}
+
+{f"RAW PREVIEW: {raw_preview[:500]}" if raw_preview else ""}
+
+Analyze and determine:
+1. Which column contains the task TITLE (the main task name/description)?
+2. Which column contains detailed DESCRIPTION (if separate from title)?
+3. Which column indicates PRIORITY?
+4. Which column has story points or time ESTIMATES?
+5. Which column shows STATUS?
+6. Which column has ASSIGNEE information?
+7. Which columns have DATES (start/due)?
+8. Are there any ID columns that indicate hierarchy (parent/child tasks)?
+9. Is the header row in the correct position, or is there metadata above it?
+
+Respond in JSON format:
+{{
+    "suggested_mapping": {{
+        "title": "column_name" or null,
+        "description": "column_name" or null,
+        "priority": "column_name" or null,
+        "story_points": "column_name" or null,
+        "status": "column_name" or null,
+        "assignee": "column_name" or null,
+        "due_date": "column_name" or null,
+        "start_date": "column_name" or null,
+        "labels": "column_name" or null
+    }},
+    "mapping_confidence": <0-100>,
+    "header_analysis": {{
+        "detected_header_row": <row_number>,
+        "has_metadata_rows": true/false,
+        "metadata_description": "description of any metadata found above headers"
+    }},
+    "data_insights": {{
+        "appears_hierarchical": true/false,
+        "hierarchy_column": "column_name" or null,
+        "id_column": "column_name" or null,
+        "data_quality": "good|fair|poor",
+        "issues_detected": ["issue1", "issue2"]
+    }},
+    "recommendations": ["recommendation 1", "recommendation 2"]
+}}"""
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are an expert at analyzing spreadsheet data for project management imports.
+Your task is to intelligently map columns to task fields and identify data structure patterns.
+Be precise in identifying which columns contain which types of data.
+Consider common variations in column naming (e.g., "Task Name", "Title", "Name" all mean title).""",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=800,
+            )
+
+            return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"AI spreadsheet analysis failed: {e}")
             return None
 
 

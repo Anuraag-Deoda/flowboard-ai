@@ -18,6 +18,10 @@ import {
   RefreshCw,
   CheckCircle,
   Upload,
+  Trash2,
+  CheckSquare,
+  Square,
+  X,
 } from "lucide-react";
 
 interface GroomingSuggestions {
@@ -62,6 +66,15 @@ export default function BacklogPage() {
   // Card modal state
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Delete confirmation modal state
+  const [deleteConfirmCard, setDeleteConfirmCard] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Batch selection state
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
 
   // Filters
   const [priorityFilter, setPriorityFilter] = useState<string>("");
@@ -177,6 +190,85 @@ export default function BacklogPage() {
     setSelectedCard(null);
   };
 
+  const handleDirectDelete = (cardId: string, cardTitle: string) => {
+    setDeleteConfirmCard({ id: cardId, title: cardTitle });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmCard) return;
+
+    setIsDeleting(true);
+    try {
+      await cardsApi.delete(deleteConfirmCard.id);
+      setCards(cards.filter(c => c.id !== deleteConfirmCard.id));
+      setDeleteConfirmCard(null);
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Failed to delete card");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmCard(null);
+  };
+
+  // Batch selection handlers
+  const toggleCardSelection = (cardId: string) => {
+    setSelectedCardIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+      } else {
+        newSet.add(cardId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllCards = () => {
+    if (selectedCardIds.size === filteredCards.length) {
+      setSelectedCardIds(new Set());
+    } else {
+      setSelectedCardIds(new Set(filteredCards.map(c => c.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedCardIds(new Set());
+  };
+
+  const confirmBatchDelete = async () => {
+    setIsBatchDeleting(true);
+    try {
+      // Delete cards one by one (could be optimized with batch API)
+      const cardIdsArray = Array.from(selectedCardIds);
+      for (const cardId of cardIdsArray) {
+        await cardsApi.delete(cardId);
+      }
+      setCards(cards.filter(c => !selectedCardIds.has(c.id)));
+      setSelectedCardIds(new Set());
+      setShowBatchDeleteConfirm(false);
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Failed to delete some cards");
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
+  const handleBatchAddToSprint = async (sprintId: string) => {
+    try {
+      const cardIdsArray = Array.from(selectedCardIds);
+      for (const cardId of cardIdsArray) {
+        await sprintsApi.addCard(sprintId, cardId);
+      }
+      alert(`${selectedCardIds.size} cards added to sprint!`);
+      setSelectedCardIds(new Set());
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Failed to add some cards to sprint");
+    }
+  };
+
   // Filter and sort cards
   const filteredCards = cards
     .filter((card) => {
@@ -269,8 +361,69 @@ export default function BacklogPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Backlog List */}
           <div className="lg:col-span-2">
+            {/* Batch Actions Bar */}
+            {selectedCardIds.size > 0 && (
+              <div className="mb-4 flex items-center gap-3 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 animate-in fade-in slide-in-from-top-2">
+                <button
+                  onClick={clearSelection}
+                  className="p-1 rounded hover:bg-blue-100"
+                >
+                  <X className="h-4 w-4 text-blue-600" />
+                </button>
+                <span className="text-sm font-medium text-blue-700">
+                  {selectedCardIds.size} card{selectedCardIds.size !== 1 ? "s" : ""} selected
+                </span>
+                <div className="flex-1" />
+                {sprints.length > 0 && (
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleBatchAddToSprint(e.target.value);
+                        e.target.value = "";
+                      }
+                    }}
+                    className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-blue-700"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Add to Sprint...</option>
+                    {sprints.map((sprint) => (
+                      <option key={sprint.id} value={sprint.id}>
+                        {sprint.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  onClick={() => setShowBatchDeleteConfirm(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Selected
+                </button>
+              </div>
+            )}
+
             {/* Filters */}
             <div className="mb-4 flex items-center gap-4">
+              {/* Select All Checkbox */}
+              <button
+                onClick={selectAllCards}
+                className="flex items-center gap-2 text-gray-500 hover:text-gray-700"
+              >
+                {selectedCardIds.size === filteredCards.length && filteredCards.length > 0 ? (
+                  <CheckSquare className="h-5 w-5 text-blue-600" />
+                ) : selectedCardIds.size > 0 ? (
+                  <div className="relative">
+                    <Square className="h-5 w-5" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-2 w-2 bg-blue-600 rounded-sm" />
+                    </div>
+                  </div>
+                ) : (
+                  <Square className="h-5 w-5" />
+                )}
+              </button>
+
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500" />
                 <select
@@ -321,24 +474,44 @@ export default function BacklogPage() {
               {filteredCards.map((card) => (
                 <div
                   key={card.id}
-                  onClick={() => handleCardClick(card)}
-                  className="flex items-center justify-between rounded-lg border bg-white p-4 shadow-sm hover:border-blue-300 hover:shadow-md cursor-pointer transition-all"
+                  className={`flex items-center justify-between rounded-lg border bg-white p-4 shadow-sm hover:border-blue-300 hover:shadow-md cursor-pointer transition-all ${
+                    selectedCardIds.has(card.id) ? "ring-2 ring-blue-400 border-blue-300" : ""
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`rounded border px-2 py-0.5 text-xs font-medium ${getPriorityColor(
-                        card.priority
-                      )}`}
+                    {/* Selection Checkbox */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCardSelection(card.id);
+                      }}
+                      className="flex-shrink-0"
                     >
-                      {card.priority || "N/A"}
-                    </span>
-                    <div>
-                      <h3 className="font-medium text-gray-900">{card.title}</h3>
-                      {card.description && (
-                        <p className="mt-0.5 text-sm text-gray-500 line-clamp-1">
-                          {card.description}
-                        </p>
+                      {selectedCardIds.has(card.id) ? (
+                        <CheckSquare className="h-5 w-5 text-blue-600" />
+                      ) : (
+                        <Square className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                       )}
+                    </button>
+                    <div
+                      className="flex items-center gap-3 flex-1"
+                      onClick={() => handleCardClick(card)}
+                    >
+                      <span
+                        className={`rounded border px-2 py-0.5 text-xs font-medium ${getPriorityColor(
+                          card.priority
+                        )}`}
+                      >
+                        {card.priority || "N/A"}
+                      </span>
+                      <div>
+                        <h3 className="font-medium text-gray-900">{card.title}</h3>
+                        {card.description && (
+                          <p className="mt-0.5 text-sm text-gray-500 line-clamp-1">
+                            {card.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
@@ -368,6 +541,13 @@ export default function BacklogPage() {
                         ))}
                       </select>
                     )}
+                    <button
+                      onClick={() => handleDirectDelete(card.id, card.title)}
+                      className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Delete card"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -514,6 +694,137 @@ export default function BacklogPage() {
           onUpdate={handleCardUpdate}
           onDelete={handleCardDelete}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={cancelDelete}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header with icon */}
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 px-6 pt-6 pb-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete Card</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-4">
+              <p className="text-gray-600">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-gray-900">"{deleteConfirmCard.title}"</span>?
+              </p>
+              <p className="mt-2 text-sm text-gray-500">
+                This will permanently remove the card and all its associated data.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={cancelDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Card
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Delete Confirmation Modal */}
+      {showBatchDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowBatchDeleteConfirm(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header with icon */}
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 px-6 pt-6 pb-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete {selectedCardIds.size} Cards</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-4">
+              <p className="text-gray-600">
+                Are you sure you want to delete <span className="font-semibold text-gray-900">{selectedCardIds.size} selected cards</span>?
+              </p>
+              <p className="mt-2 text-sm text-gray-500">
+                This will permanently remove these cards and all their associated data.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => setShowBatchDeleteConfirm(false)}
+                disabled={isBatchDeleting}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBatchDelete}
+                disabled={isBatchDeleting}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isBatchDeleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedCardIds.size} Cards
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

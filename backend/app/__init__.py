@@ -63,6 +63,8 @@ def register_blueprints(app):
     from .api.ai import ai_bp
     from .api.analytics import analytics_bp
     from .api.imports import imports_bp
+    from .api.notifications import notifications_bp
+    from .api.templates import templates_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -78,6 +80,8 @@ def register_blueprints(app):
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
     app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
     app.register_blueprint(imports_bp, url_prefix="/api/import")
+    app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
+    app.register_blueprint(templates_bp, url_prefix="/api/templates")
 
 
 def register_error_handlers(app):
