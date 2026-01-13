@@ -58,6 +58,9 @@ def register_blueprints(app):
     from .api.columns import columns_bp
     from .api.cards import cards_bp
     from .api.labels import labels_bp
+    from .api.sprints import sprints_bp
+    from .api.daily_logs import daily_logs_bp
+    from .api.ai import ai_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -68,6 +71,9 @@ def register_blueprints(app):
     app.register_blueprint(columns_bp, url_prefix="/api/columns")
     app.register_blueprint(cards_bp, url_prefix="/api/cards")
     app.register_blueprint(labels_bp)
+    app.register_blueprint(sprints_bp, url_prefix="/api/sprints")
+    app.register_blueprint(daily_logs_bp, url_prefix="/api/daily-logs")
+    app.register_blueprint(ai_bp, url_prefix="/api/ai")
 
 
 def register_error_handlers(app):
