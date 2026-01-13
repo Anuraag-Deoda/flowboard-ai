@@ -11,7 +11,8 @@ from app import create_app
 from app.extensions import db
 from app.models import (
     User, Organization, OrganizationMember, Workspace, Project,
-    Board, Column, Card, Label, Sprint, DailyLog, DomainEvent
+    Board, Column, Card, Label, Sprint, DailyLog, DomainEvent,
+    Subtask, CardLink, Attachment
 )
 from app.models.column import DEFAULT_COLUMNS
 from app.models.organization import MemberRole
