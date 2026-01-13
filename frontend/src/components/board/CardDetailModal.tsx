@@ -5,11 +5,18 @@ import { X, Calendar, Tag, Users, MessageSquare, Clock, Trash2 } from "lucide-re
 import { cn } from "@/lib/utils";
 import { cardsApi } from "@/lib/api";
 import { LabelPicker } from "./LabelPicker";
-import type { Card, Priority, Comment, Label, CardLabel } from "@/types";
+import { MarkdownEditor } from "./MarkdownEditor";
+import { AssigneePicker } from "./AssigneePicker";
+import { ActivityTimeline } from "./ActivityTimeline";
+import { SubtaskList } from "./SubtaskList";
+import { CardLinksList } from "./CardLinksList";
+import { AttachmentsList } from "./AttachmentsList";
+import type { Card, Priority, Comment, Label, CardLabel, CardAssignee, Subtask, Attachment } from "@/types";
 
 interface CardDetailModalProps {
   card: Card;
   boardId: string;
+  organizationId?: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (card: Card) => void;
@@ -24,7 +31,7 @@ const priorityOptions: { value: Priority; label: string; color: string }[] = [
   { value: "P4", label: "Minimal", color: "bg-gray-400" },
 ];
 
-export function CardDetailModal({ card, boardId, isOpen, onClose, onUpdate, onDelete }: CardDetailModalProps) {
+export function CardDetailModal({ card, boardId, organizationId, isOpen, onClose, onUpdate, onDelete }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
   const [priority, setPriority] = useState<Priority | null>(card.priority);
@@ -33,10 +40,14 @@ export function CardDetailModal({ card, boardId, isOpen, onClose, onUpdate, onDe
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<Comment[]>(card.comments || []);
   const [cardLabels, setCardLabels] = useState<CardLabel[]>(card.labels || []);
+  const [assignees, setAssignees] = useState<CardAssignee[]>(card.assignees || []);
+  const [subtasks, setSubtasks] = useState<Subtask[]>(card.subtasks || []);
+  const [attachments, setAttachments] = useState<Attachment[]>(card.attachments || []);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState<"comments" | "activity">("comments");
 
   useEffect(() => {
     setTitle(card.title);
@@ -46,7 +57,11 @@ export function CardDetailModal({ card, boardId, isOpen, onClose, onUpdate, onDe
     setDueDate(card.due_date || "");
     setComments(card.comments || []);
     setCardLabels(card.labels || []);
+    setAssignees(card.assignees || []);
+    setSubtasks(card.subtasks || []);
+    setAttachments(card.attachments || []);
     setShowDeleteConfirm(false);
+    setActiveTab("comments");
   }, [card]);
 
   const handleSave = async () => {
@@ -154,57 +169,113 @@ export function CardDetailModal({ card, boardId, isOpen, onClose, onUpdate, onDe
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Description
                 </label>
-                <textarea
+                <MarkdownEditor
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Add a description... (Markdown supported)"
+                  onChange={setDescription}
+                  placeholder="Add a description..."
                 />
               </div>
 
-              {/* Comments */}
+              {/* Subtasks */}
+              <div className="rounded-lg border border-gray-200 p-4">
+                <SubtaskList
+                  cardId={card.id}
+                  subtasks={subtasks}
+                  onSubtasksChange={setSubtasks}
+                />
+              </div>
+
+              {/* Attachments */}
+              <div className="rounded-lg border border-gray-200 p-4">
+                <AttachmentsList
+                  cardId={card.id}
+                  attachments={attachments}
+                  onAttachmentsChange={setAttachments}
+                />
+              </div>
+
+              {/* Comments & Activity Tabs */}
               <div>
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <MessageSquare className="h-4 w-4" />
-                  Comments ({comments.length})
-                </h3>
-
-                <div className="space-y-3">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="rounded-lg bg-gray-50 p-3">
-                      <div className="mb-1 flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-medium text-white">
-                          {(comment.user?.full_name || comment.user?.email || "?")[0].toUpperCase()}
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {comment.user?.full_name || comment.user?.email}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">{comment.content}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-3">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={2}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Write a comment..."
-                  />
+                <div className="flex border-b border-gray-200 mb-3">
                   <button
-                    onClick={handleAddComment}
-                    disabled={!newComment.trim() || isAddingComment}
-                    className="mt-2 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    onClick={() => setActiveTab("comments")}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                      activeTab === "comments"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    )}
                   >
-                    {isAddingComment ? "Adding..." : "Add Comment"}
+                    <MessageSquare className="h-4 w-4" />
+                    Comments ({comments.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("activity")}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                      activeTab === "activity"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    )}
+                  >
+                    Activity
                   </button>
                 </div>
+
+                {activeTab === "comments" ? (
+                  <div>
+                    {/* Comments Thread */}
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {comments.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-2">No comments yet. Be the first to comment!</p>
+                      ) : (
+                        comments.map((comment) => (
+                          <div key={comment.id} className="flex gap-3">
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-500 text-sm font-medium text-white">
+                              {(comment.user?.full_name || comment.user?.email || "?")[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1 rounded-lg bg-gray-50 p-3">
+                              <div className="mb-1 flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {comment.user?.full_name || comment.user?.email}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(comment.created_at).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Add Comment */}
+                    <div className="mt-4 flex gap-3">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-300 text-sm font-medium text-gray-600">
+                        ?
+                      </div>
+                      <div className="flex-1">
+                        <textarea
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          rows={2}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="Write a comment..."
+                        />
+                        <button
+                          onClick={handleAddComment}
+                          disabled={!newComment.trim() || isAddingComment}
+                          className="mt-2 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {isAddingComment ? "Adding..." : "Add Comment"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <ActivityTimeline cardId={card.id} />
+                )}
               </div>
             </div>
 
@@ -266,24 +337,33 @@ export function CardDetailModal({ card, boardId, isOpen, onClose, onUpdate, onDe
                   <Users className="h-4 w-4" />
                   Assignees
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {card.assignees?.map((assignee) => (
-                    <div
-                      key={assignee.user_id}
-                      className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1"
-                    >
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-medium text-white">
-                        {(assignee.user?.full_name || assignee.user?.email || "?")[0].toUpperCase()}
+                {organizationId ? (
+                  <AssigneePicker
+                    cardId={card.id}
+                    organizationId={organizationId}
+                    currentAssignees={assignees}
+                    onAssigneeChange={setAssignees}
+                  />
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {assignees.map((assignee) => (
+                      <div
+                        key={assignee.user_id}
+                        className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1"
+                      >
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-medium text-white">
+                          {(assignee.user?.full_name || assignee.user?.email || "?")[0].toUpperCase()}
+                        </div>
+                        <span className="text-xs text-gray-700">
+                          {assignee.user?.full_name || assignee.user?.email}
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-700">
-                        {assignee.user?.full_name || assignee.user?.email}
-                      </span>
-                    </div>
-                  ))}
-                  {(!card.assignees || card.assignees.length === 0) && (
-                    <span className="text-sm text-gray-500">No assignees</span>
-                  )}
-                </div>
+                    ))}
+                    {assignees.length === 0 && (
+                      <span className="text-sm text-gray-500">No assignees</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Labels */}
@@ -311,6 +391,11 @@ export function CardDetailModal({ card, boardId, isOpen, onClose, onUpdate, onDe
                     onLabelToggle={handleLabelToggle}
                   />
                 </div>
+              </div>
+
+              {/* Linked Issues */}
+              <div className="border-t pt-4">
+                <CardLinksList cardId={card.id} boardId={boardId} />
               </div>
 
               {/* Meta info */}
