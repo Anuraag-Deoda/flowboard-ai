@@ -65,6 +65,7 @@ def register_blueprints(app):
     from .api.imports import imports_bp
     from .api.notifications import notifications_bp
     from .api.templates import templates_bp
+    from .api.teams import teams_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -82,6 +83,7 @@ def register_blueprints(app):
     app.register_blueprint(imports_bp, url_prefix="/api/import")
     app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
     app.register_blueprint(templates_bp, url_prefix="/api/templates")
+    app.register_blueprint(teams_bp, url_prefix="/api/teams")
 
 
 def register_error_handlers(app):
